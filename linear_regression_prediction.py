@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -87,6 +88,7 @@ plt.legend()
 plt.tight_layout()
 
 # Save the plot as an image
+os.makedirs("Outputs", exist_ok=True)
 plt.savefig("Outputs/lambda_tuning_curve.png")
 
 # Display the plot on screen
