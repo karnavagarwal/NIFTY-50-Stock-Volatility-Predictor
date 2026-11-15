@@ -1,24 +1,31 @@
+import numpy as np
 import pandas as pd
 from xg_boost import XGBoost
-#From the xgboost_tuning_curve.jpg file in the outputs folder, we have selected the following parameters.
-#Even though no of trees were 50 in the lowest one, 30 was the point of elbow.
-#Which means that after 30 trees, adding more trees did not add have much impact in our model.
+#values chosen from the validation graph. chosen depth and lambda are the argmin values, but the number of trees is the elbow in the graph.
 CHOSEN_DEPTH = 3
 CHOSEN_TREES = 30
 CHOSEN_LAMBDA = 10.0
 
 print(f"Loading data for final test run (Depth: {CHOSEN_DEPTH}, Trees: {CHOSEN_TREES}, Lambda: {CHOSEN_LAMBDA})...")
 train_df = pd.read_csv("train_raw.csv", parse_dates=['Date'])
+val_df = pd.read_csv("val_raw.csv", parse_dates=['Date']) # Added this
 test_df = pd.read_csv("test_raw.csv", parse_dates=['Date'])
 
 feature_cols = ['DailyLogReturn', '5dayCumReturn', 'Vol_5d', 'Vol_21d', 'IntradayRange', 'VolumeRatio']
 target_col = 'Target_Vol_5d'
 
+# Extract arrays
 X_train = train_df[feature_cols].values
 y_train = train_df[target_col].values
+X_val = val_df[feature_cols].values       # Added this
+y_val = val_df[target_col].values         # Added this
 X_test = test_df[feature_cols].values
 
-print("\nTraining final XGBoost model...")
+# Concatenate the time-series
+X_train_full = np.vstack((X_train, X_val))
+y_train_full = np.concatenate((y_train, y_val))
+
+print("\nTraining final XGBoost model on combined 2008-2019 data...")
 final_model = XGBoost(
     n_estimators=CHOSEN_TREES,
     learning_rate=0.1,
@@ -28,7 +35,8 @@ final_model = XGBoost(
     delta=0.1
 )
 
-final_model.fit(X_train, y_train)
+# Train on the concatenated data
+final_model.fit(X_train_full, y_train_full)
 
 print("\nGenerating predictions on test data...")
 predictions = final_model.predict(X_test)

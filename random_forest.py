@@ -72,11 +72,8 @@ class DecisionTree:
 
         for feat_idx in feat_idxs:
             X_column = X[:, feat_idx]
-            unique_sorted_values = np.sort(np.unique(X_column))
-            if len(unique_sorted_values) <= 1:
-                continue
-
-            thresholds = (unique_sorted_values[:-1] + unique_sorted_values[1:]) / 2.0
+            # We use deciles to prevent exhaustive N^2 search bottleneck
+            thresholds = np.unique(np.percentile(X_column, np.arange(0, 100, 10)))
 
             for threshold in thresholds:
                 left_mask = X_column <= threshold
