@@ -120,6 +120,17 @@ pre{background:var(--code);border-radius:8px;padding:14px 18px;font:.88rem var(-
 .defs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
 .defs b{display:block}
 .defs span{color:var(--mute);font-size:.95rem}
+.scratch{display:flex;gap:18px;align-items:flex-start;margin:44px 0 0;padding:20px 24px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;max-width:760px}
+.scratch .badge{flex:none;font:700 .85rem var(--mono);background:var(--accent);color:#fff;border-radius:8px;padding:8px 10px}
+.scratch .lbl{color:var(--accent);margin:0 0 6px}
+.scratch p{margin:0}
+.scratch p+p,.scratch div>p:last-child{font-size:.97rem}
+.fig{margin:18px 0 0}
+.fig img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+.fig figcaption{font-size:.85rem;color:var(--mute);margin-top:8px}
+.split small{display:block;color:inherit;opacity:.75;margin-top:2px}
+.split.tl{grid-template-columns:3fr .7fr 1fr 2fr}
+.split .test{border-style:dashed;border-color:var(--accent);color:var(--accent);font-weight:600}
 footer{padding:48px 0 64px;color:var(--mute);font-size:.88rem}
 footer code{background:none;padding:0;display:block;margin-top:4px}
 @media(max-width:760px){
@@ -140,8 +151,8 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 .pipe{grid-template-columns:1fr}
 .pipe .arr{transform:rotate(90deg);justify-self:center}
 .three,.defs{grid-template-columns:1fr}
-.split{grid-template-columns:1fr}
-.box{padding:18px}
+.split,.split.tl{grid-template-columns:1fr}
+.box{padding:18px}.scratch{flex-direction:column;gap:12px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -161,37 +172,43 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <h1>NIFTY-50 Stock <em>Volatility Prediction.</em></h1>
 <p class="facts">5 equities<b>/</b>5-day forecast horizon<b>/</b>6 models</p>
 
-<div class="bar"><span class="tag">Explore the project / 01&mdash;05</span><button class="link" id="all" type="button">Expand all &#8599;</button></div>
+<aside class="scratch" aria-label="Built from scratch">
+ <span class="badge" aria-hidden="true">&lt;/&gt;</span>
+ <div><p class="lbl">Built from scratch, no scikit-learn</p>
+ <p>Every model and preprocessing step on this page is our own implementation: the <code>StandardScaler</code>, the Ridge solver, the decision trees, the Random Forest, the XGBoost engine with its Pseudo-Huber loss, and the Naive Persistence baseline. We wrote them from the maths up and didn&rsquo;t call scikit-learn for any of it.</p></div>
+</aside>
+
+<div class="bar"><span class="tag">Explore the project / 01&mdash;06</span><button class="link" id="all" type="button">Expand all &#8599;</button></div>
 
 <!-- 01 -->
-<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p1" id="h1b"><span class="num">01</span><span class="ttl">Problem Formulation and Scope</span><span class="pm"></span></button></h2>
+<section class="acc" id="s1"><h2><button class="head" aria-expanded="false" aria-controls="p1" id="h1b"><span class="num">01</span><span class="ttl">Problem Formulation and Scope</span><span class="pm"></span></button></h2>
 <div class="panel" id="p1" role="region" aria-labelledby="h1b"><div><div class="body">
 <h3>The Precise Question</h3>
-<p>Can custom machine learning architectures, specifically those centered around trees, like Random Forests and XGBoost, accurately forecast the 5-day forward volatility of major NIFTY-50 equities? Will they remain stable during extreme macro-shocks like the March 2020 COVID-19 crash?</p>
+<p>Can tree-based machine learning models, specifically Random Forests and XGBoost built from scratch, accurately forecast the 5-day forward volatility of major NIFTY-50 stocks? And do they stay stable through extreme macro-shocks like the March 2020 COVID-19 crash?</p>
 <h3>Target and Unit</h3>
-<p>The target variable is <code>Target_Vol_5d</code>. Its unit is the annualized standard deviation of daily log returns, calculated over a 5-day window and multiplied by &radic;252.</p>
+<p>Our target is <code>Target_Vol_5d</code>: the annualized standard deviation of daily log returns, taken over a 5-day rolling window and multiplied by &radic;252.</p>
 <div class="eq">Target_Vol_5d<sub>t</sub> &nbsp;=&nbsp; &radic;252 &middot; s(r<sub>t+1</sub>, &hellip;, r<sub>t+5</sub>)</div>
 <h3>Prediction-time Information</h3>
-<p>The models are strictly limited to the data available at the market close of day <i>t</i>, the day on which the 5-day forward volatility prediction is made. All engineered features, such as 5-day cumulative returns, 21-day trailing volatility, and 3-day/21-day volume ratios, use only historical data up to <i>t</i>. The target is the volatility from <i>t+1</i> to <i>t+5</i>.</p>
-<p>To prevent future-data leakage, the pipeline purges the 5-day overlapping boundaries between training and validation sets. A 6-month walk-forward rolling optimization is used for the final testing phase.</p>
+<p>The models only see what was known at the market close of day <i>t</i>, the day we make the prediction. Every engineered feature (5-day cumulative return, 21-day trailing volatility, 3-day/21-day volume ratio) is calculated from history up to <i>t</i> and nothing after. The target is the volatility from <i>t+1</i> to <i>t+5</i>.</p>
+<p>To enforce this and stop future data leaking in, we purge the 5-day overlapping boundaries between the training and validation sets. For the final testing phase we go a step further and use a 6-month walk-forward rolling optimization.</p>
 <div class="box"><p class="lbl">The forecasting boundary</p>
 <div class="flow">
  <div class="tile"><span class="k">Historical information</span><strong>Features through day t</strong><small>Returns &middot; volatility &middot; volume</small></div><span class="arr" aria-hidden="true">&rarr;</span>
  <div class="tile"><span class="k">Prediction point</span><strong>Market close &middot; t</strong><small>No future inputs</small></div><span class="arr" aria-hidden="true">&rarr;</span>
  <div class="tile"><span class="k">Future target</span><strong>Days t+1 &rarr; t+5</strong><small>Annualized realized volatility</small></div>
-</div><p class="note">Inputs end at the prediction point. The target is calculated from the next five trading days.</p></div>
+</div><p class="note">Inputs stop at the prediction point. The target is calculated from the next five trading days.</p></div>
 <h3>Limits of the Claim</h3>
-<p>The models predict the <b>magnitude</b> of volatility, not exact daily micro-directional price movements. The project reports approximately 52% Mean Directional Accuracy (MDA) and an out-of-sample R&sup2; of approximately 0.29. These results indicate captured variance and a slight directional edge over a coin flip, while remaining bounded by the noise of overlapping financial time series.</p>
-<div class="callout"><p class="lbl">Scope</p><p>Five highly liquid, large-cap NIFTY-50 constituents&mdash;Reliance, TCS, ITC, Maruti, and HDFC Bank&mdash;between 2008 and 2026.</p></div>
+<p>We&rsquo;re predicting the <b>magnitude</b> of volatility, not the exact day-to-day moves in price. A Mean Directional Accuracy (MDA) of about 52% and an out-of-sample R&sup2; of about 0.29 show that the models pick up real variance and have a slight edge over a coin flip on direction. They&rsquo;re still limited by the natural noise of overlapping financial time series.</p>
+<div class="callout"><p class="lbl">Scope</p><p>Five highly liquid, large-cap NIFTY-50 stocks (Reliance, TCS, ITC, Maruti and HDFC Bank) between 2008 and 2026.</p></div>
 </div></div></div></section>
 
 <!-- 02 -->
-<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p2" id="h2b"><span class="num">02</span><span class="ttl">Data Understanding</span><span class="pm"></span></button></h2>
+<section class="acc" id="s2"><h2><button class="head" aria-expanded="false" aria-controls="p2" id="h2b"><span class="num">02</span><span class="ttl">Data Understanding</span><span class="pm"></span></button></h2>
 <div class="panel" id="p2" role="region" aria-labelledby="h2b"><div><div class="body">
 <h3>Source and Access Limits</h3>
-<p>The project uses historical market data for National Stock Exchange (NSE) equities, downloaded through the <code>yfinance</code> Python API. The publicly accessible historical dataset, January 2008 to October 2026, was downloaded and stored locally as <code>raw_data.csv</code> to avoid API rate limits and network latency during training.</p>
+<p>The raw data comes straight from the National Stock Exchange (NSE) of India through the <code>yfinance</code> Python API. It&rsquo;s public and open-source, but to avoid API rate limits and network lag during training, we downloaded the whole history (January 2008 to October 2026) once and stored it locally as <code>raw_data.csv</code>.</p>
 <h3>Row Meaning</h3>
-<p>Each row represents a single trading day&rsquo;s aggregated market activity for a specific NIFTY-50 constituent. Non-trading days, including weekends and exchange holidays, are naturally excluded.</p>
+<p>Each row is one trading day&rsquo;s aggregated market activity for one NIFTY-50 stock. Weekends and exchange holidays aren&rsquo;t trading days, so they&rsquo;re naturally left out.</p>
 <div class="chips">
  <div class="tile"><strong>Reliance</strong><code>RELIANCE.NS</code></div><div class="tile"><strong>TCS</strong><code>TCS.NS</code></div><div class="tile"><strong>ITC</strong><code>ITC.NS</code></div><div class="tile"><strong>Maruti</strong><code>MARUTI.NS</code></div><div class="tile"><strong>HDFC Bank</strong><code>HDFCBANK.NS</code></div>
 </div>
@@ -199,19 +216,19 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <div class="tbl">
  <div class="tr"><span>Variable group</span><span>Contents</span></div>
  <div class="tr"><b>Raw variables</b><span>Date, Ticker, Open, High, Low, Close, Volume</span></div>
- <div class="tr"><b>Engineered features</b><span>Daily Log Return; Intraday Range; 5-Day and 21-Day Trailing Volatility (annualized); 3-Day/21-Day Volume Ratio; 5-Day Cumulative Return</span></div>
- <div class="tr"><b>Target variable</b><span><code>Target_Vol_5d</code>: annualized standard deviation of daily log returns over the future 5-day window</span></div>
+ <div class="tr"><b>Engineered features</b><span>Daily Log Return; Intraday Range (a market friction proxy); 5-Day and 21-Day Trailing Volatility (annualized); 3-Day/21-Day Volume Ratio (liquidity surges); 5-Day Cumulative Return (momentum)</span></div>
+ <div class="tr"><b>Target variable</b><span><code>Target_Vol_5d</code>: the annualized standard deviation of daily log returns over the <i>future</i> 5-day window</span></div>
 </div>
 <h3>Relevant Quality Checks</h3>
 <ol>
- <li class="q"><h4>Holiday Padding Removal</h4><p>The project identifies zero-volume rows with Open = High = Low = Close as artificial holiday padding. A strict filter removes these rows.</p><pre>df = df[df['Volume'] &gt; 0]</pre></li>
- <li class="q"><h4>Edge-Case NaN Dropping</h4><p>Rolling calculations for features, such as 21-day trailing volatility, and the 5-day forward target generate NaN values at the dataset edges. These rows are dropped instead of using forward-fill or backward-fill.</p><pre>df = df.dropna()</pre></li>
- <li class="q"><h4>Leakage-Free Scaling</h4><p>An object-oriented <code>StandardScaler</code> was implemented from scratch. It calculates the mean and variance on the 2008&ndash;2018 training data and applies the same static transformation to validation and test sets, keeping their distributions out of the scaling fit.</p></li>
+ <li class="q"><h4>Holiday Padding Removal</h4><p><code>yfinance</code> sometimes pads exchange holidays with zero-volume rows where Open = High = Low = Close. A strict filter scrubs these artificial rows.</p><pre>df = df[df['Volume'] &gt; 0]</pre></li>
+ <li class="q"><h4>Edge-Case NaN Dropping</h4><p>Rolling windows (the 21-day trailing features and the 5-day forward target) naturally leave <code>NaN</code> values at the edges of the dataset. We drop those rows instead of forward-filling or back-filling, because filling would leak information across time in a financial series.</p><pre>df = df.dropna()</pre></li>
+ <li class="q"><h4>Leakage-Free Scaling</h4><p>We wrote an object-oriented <code>StandardScaler</code> from scratch. It learns the mean and variance only from the 2008&ndash;2018 training data, then applies that frozen transformation to the validation and test sets, so nothing from the future leaks into the fit.</p></li>
 </ol>
 </div></div></div></section>
 
 <!-- 03 -->
-<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p3" id="h3b"><span class="num">03</span><span class="ttl">Preprocessing and Statistical Reasoning</span><span class="pm"></span></button></h2>
+<section class="acc" id="s3"><h2><button class="head" aria-expanded="false" aria-controls="p3" id="h3b"><span class="num">03</span><span class="ttl">Preprocessing and Statistical Reasoning</span><span class="pm"></span></button></h2>
 <div class="panel" id="p3" role="region" aria-labelledby="h3b"><div><div class="body">
 <div class="box" style="margin-top:8px"><p class="lbl">From raw data to model-ready features</p>
  <div class="pipe">
@@ -222,60 +239,60 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
    <ul class="feat"><li>DailyLogReturn</li><li>IntradayRange</li><li>Vol_5d</li><li>Vol_21d</li><li>VolumeRatio</li><li>5dayCumReturn</li></ul></div>
  </div>
  <div class="target"><span>Separate prediction target</span><code>Target_Vol_5d</code><span>Future window &middot; t+1 to t+5</span></div>
- <p class="note">Date and Ticker identify and order the observations; the six engineered variables form the model inputs. The future target is kept separate.</p></div>
+ <p class="note">Date and Ticker identify and order the rows; the six engineered variables are the model inputs. The future target is kept apart from them.</p></div>
 
 <h3>Justification of Transformations</h3>
-<div class="card"><p><span class="n">01</span><b>Logarithmic Returns</b></p><p class="sub">DailyLogReturn</p><div class="eq">ln(Close<sub>t</sub> / Close<sub>t&minus;1</sub>)</div><p>Log returns are time-additive, making them useful for aggregating returns and calculating volatility.</p></div>
-<div class="card"><p><span class="n">02</span><b>Market Friction Proxy</b></p><p class="sub">IntradayRange</p><div class="eq">(High &minus; Low) / Close</div><p>Dividing the absolute daily range by the closing price normalizes intraday price action, creating a scale-invariant proxy for daily micro-volatility.</p></div>
-<div class="card"><p><span class="n">03</span><b>Volatility Annualization</b></p><p class="sub">Vol_5d &middot; Vol_21d &middot; Target_Vol_5d</p><div class="eq">s<sub>rolling</sub>(log returns) &times; &radic;252</div><p>The rolling sample standard deviation uses N&minus;1 degrees of freedom. Multiplication by &radic;252 scales the local volatility to an annualized metric. The target uses the same formulation over the future 5-day window.</p></div>
-<div class="card"><p><span class="n">04</span><b>Volume Summaries</b></p><p class="sub">VolumeRatio</p><div class="eq">mean<sub>3-day</sub>(Volume) / mean<sub>21-day</sub>(Volume)</div><p>Raw trading volume is non-stationary and can trend over decades. The ratio of a 3-day short-term average to a 21-day baseline isolates relative liquidity surges and reduces scale effects.</p></div>
-<div class="card"><p><span class="n">05</span><b>Momentum Aggregation</b></p><p class="sub">5dayCumReturn</p><div class="eq">&Sigma;<sub>i=0&hellip;4</sub> DailyLogReturn<sub>t&minus;i</sub></div><p>Because log returns are time-additive, a rolling 5-day sum provides an aggregate of short-term directional momentum.</p></div>
+<div class="card"><p><span class="n">01</span><b>Logarithmic Returns</b></p><p class="sub">DailyLogReturn</p><div class="eq">ln(Close<sub>t</sub> / Close<sub>t&minus;1</sub>)</div><p>Unlike simple percentage returns, log returns are symmetric and time-additive, which makes them the better choice for variance and volatility calculations.</p></div>
+<div class="card"><p><span class="n">02</span><b>Market Friction Proxy</b></p><p class="sub">IntradayRange</p><div class="eq">(High &minus; Low) / Close</div><p>Dividing the day&rsquo;s high-low spread by the closing price normalizes intraday price action. The result is scale-invariant, so it works as a proxy for daily micro-volatility across stocks at very different price levels.</p></div>
+<div class="card"><p><span class="n">03</span><b>Volatility Annualization</b></p><p class="sub">Vol_5d &middot; Vol_21d &middot; Target_Vol_5d</p><div class="eq">s<sub>rolling</sub>(log returns) &times; &radic;252</div><p>This is the rolling standard deviation (N&minus;1 degrees of freedom) of log returns, scaled by the square root of the number of trading days in a year. That turns localized variance into a standard annualized number that&rsquo;s comparable everywhere. The target uses the exact same formula, shifted 5 days into the future.</p></div>
+<div class="card"><p><span class="n">04</span><b>Volume Summaries</b></p><p class="sub">VolumeRatio</p><div class="eq">mean<sub>3-day</sub>(Volume) / mean<sub>21-day</sub>(Volume)</div><p>Raw volume is highly non-stationary and trends upward over decades. Taking a 3-day moving average relative to a 21-day baseline picks out sudden liquidity surges and makes the feature stationary.</p></div>
+<div class="card"><p><span class="n">05</span><b>Momentum Aggregation</b></p><p class="sub">5dayCumReturn</p><div class="eq">&Sigma;<sub>i=0&hellip;4</sub> DailyLogReturn<sub>t&minus;i</sub></div><p>Since log returns add up over time, a plain rolling 5-day sum is a sound measure of short-term directional momentum.</p></div>
 
 <h3>Leakage-Free Standard Scaling</h3>
-<p>Features were transformed using Z-score standardization:</p>
+<p>So that features with large magnitudes (like <code>VolumeRatio</code>) don&rsquo;t dominate the models, we standardize everything with Z-scores:</p>
 <div class="eq">Z = (X &minus; &mu;<sub>train</sub>) / &sigma;<sub>train</sub></div>
-<p>The custom object-oriented <code>StandardScaler</code> calculates the mean (&mu;) and standard deviation (&sigma;) only on the 2008&ndash;2018 training set. Validation and test sets are transformed using these frozen training statistics, preventing future distributions from leaking into preprocessing.</p>
+<p>Our from-scratch <code>StandardScaler</code> computes the mean (&mu;) and standard deviation (&sigma;) <i>only</i> on the 2008&ndash;2018 training set. The validation and test sets are then transformed with those frozen training statistics, so no future distribution can leak into training.</p>
 
 <h3>The Overlapping Boundary Purge</h3>
-<p>Because the target looks 5 days into the future, a chronological split alone can allow training targets to cross into the validation period. The final training observations must be purged at the boundary.</p>
-<p>The pipeline uses <code>.groupby('Ticker').head(-5)</code> to drop the final five rows per ticker from the training and validation splits before scaling. The project also describes boundary handling for 21-day windows.</p>
+<p>The target looks 5 days ahead, so a plain chronological split leaks: the last 5 days of the training set share target math with the first 5 days of the validation set.</p>
+<p>To close that gap, the pipeline drops the contaminated edge rows from both the training and validation splits before scaling, using <code>.groupby('Ticker').head(-5)</code>. We did the same for the 21-day windows.</p>
 <div class="box"><p class="lbl">Temporal split discipline</p>
  <div class="split"><div class="tr1">Training data</div><div class="pg">Purge<br>5 days</div><div>Validation data</div><div class="pg">Purge<br>5 days</div><div>Test data</div></div>
- <p class="note">Schematic, not to scale. Purging removes observations whose forward-looking targets cross a split boundary.</p></div>
+ <p class="note">Schematic, not to scale. Purging removes rows whose forward-looking targets cross a split boundary.</p></div>
 </div></div></div></section>
 
 <!-- 04 -->
-<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p4" id="h4b"><span class="num">04</span><span class="ttl">Baseline and Method Selection</span><span class="pm"></span></button></h2>
+<section class="acc" id="s4"><h2><button class="head" aria-expanded="false" aria-controls="p4" id="h4b"><span class="num">04</span><span class="ttl">Baseline and Method Selection</span><span class="pm"></span></button></h2>
 <div class="panel" id="p4" role="region" aria-labelledby="h4b"><div><div class="body">
 <h3>Meaningful Baselines</h3>
-<div class="card"><span class="k">Baseline 01</span><h4>Naive Persistence</h4>
-<p>A one-day shift of the target is not a valid real-time forecast: adjacent 5-day target windows share 80% of their returns, and the previous day&rsquo;s forward target is not yet known. The project observed an artificially inflated out-of-sample R&sup2; of 0.77 with this overlapping-target approach.</p>
-<p>The implemented persistence baseline instead predicts that future 5-day volatility will equal the trailing 5-day historical volatility feature, <code>Vol_5d</code>. It provides an available-at-prediction-time reference against which the machine learning models can be compared.</p>
+<div class="card"><span class="k">Baseline 01</span><h4>The Overlapping Naive Baseline Trap: Naive Persistence</h4>
+<p>The usual &ldquo;random walk&rdquo; baseline just shifts the target forward by one day. That breaks down here. The target (<code>Target_Vol_5d</code>) is a rolling 5-day window, so a 1-day shift shares 80% of its data with the previous day. That&rsquo;s heavy leakage, and it gave us an out-of-sample R&sup2; of 0.77 that looked great and meant nothing.</p>
+<p>So we built a custom <code>Naive Persistence</code> model instead. It treats the market as a pure martingale process and predicts that future 5-day volatility will equal the <i>trailing</i> 5-day volatility feature, <code>Vol_5d</code>. If our ML models beat this, they&rsquo;re finding genuine alpha and not just riding autocorrelation.</p>
 <div class="eq">Predicted Target_Vol_5d<sub>t</sub> = Vol_5d<sub>t</sub></div></div>
-<div class="card"><span class="k">Baseline 02</span><h4>Ridge Regression</h4>
-<p>Financial features, such as 5-day and 21-day trailing volatilities, can be multicollinear. A custom Ridge Regression solver establishes a linear performance floor, using an L2 penalty to stabilize weights and reduce overfitting relative to unregularized ordinary least squares.</p></div>
+<div class="card"><span class="k">Baseline 02</span><h4>Ridge Regression (Linear Baseline)</h4>
+<p>Financial features like the 5-day and 21-day trailing volatilities are inherently multicollinear, and plain Ordinary Least Squares (OLS) would end up with exploding weights. Our custom Ridge Regression solver sets a linear performance floor, using an L2 penalty to handle the collinearity and limit overfitting.</p></div>
 
 <h3>Method Choices and Assumptions</h3>
-<div class="card"><span class="k">01 / Extreme macro-outliers</span><h4>Custom XGBoost with Pseudo-Huber Loss</h4>
-<p>Financial markets contain extreme macro-outliers, including the March 2020 COVID-19 crash. Squared-error loss gives large errors a strong gradient, potentially placing excessive emphasis on volatility spikes.</p>
-<p>The custom XGBoost engine optimizes Pseudo-Huber loss. It behaves quadratically near zero and approximately linearly for large errors, limiting the influence of extreme residuals. This is the project&rsquo;s robustness mechanism for crash conditions.</p></div>
-<div class="card"><span class="k">02 / Non-linear relationships</span><h4>Custom Random Forest</h4>
-<p>Liquidity surges (Volume Ratio) and price friction (Intraday Range) may have non-linear relationships. A decision-tree ensemble was built from scratch using variance reduction for node splitting.</p>
-<p>Bootstrap aggregating (bagging) and subset feature selection, <code>max_features='sqrt'</code>, diversify the trees and reduce overfitting to noise in individual historical events, such as the 2008 financial crisis.</p></div>
-<div class="card"><span class="k">03 / Changing market regimes</span><h4>Walk-Forward Optimization</h4>
-<p>Market microstructures are non-stationary: models trained on older data may lose relevance over time. The project therefore extends the static train-test setup with a rolling temporal loop.</p>
-<p>Models train on past data, predict the next 6 months, then move forward to incorporate newly observed data before predicting the next block. This process allows adaptation to changing NIFTY-50 volatility regimes.</p></div>
+<div class="card"><span class="k">Assumption 1 / Extreme macro-outliers</span><h4>Custom XGBoost with Pseudo-Huber Loss</h4>
+<p>Financial markets throw up extreme, unpredictable outliers, like the March 2020 COVID-19 crash.</p>
+<p>Standard gradient boosting minimizes Mean Squared Error (MSE). In a crash, the squared error of a volatility spike produces a massive gradient, and the model overreacts and overfits the outlier. We built our own XGBoost engine that optimizes a Pseudo-Huber loss instead. It acts like convex MSE for normal daily errors, then eases into a linear Mean Absolute Error (MAE) for extreme ones. That caps the gradient penalty and keeps the model stable through 2020.</p></div>
+<div class="card"><span class="k">Assumption 2 / Non-linear relationships</span><h4>Custom Random Forest</h4>
+<p>We expect complex, non-linear relationships between liquidity surges (Volume Ratio) and price friction (Intraday Range).</p>
+<p>We built the decision-tree ensemble from scratch, splitting nodes by variance reduction. Bootstrap aggregating (bagging) and random feature subsets (<code>max_features='sqrt'</code>) stop individual trees from memorizing the noise of specific events, like the 2008 financial crisis.</p></div>
+<div class="card"><span class="k">Assumption 3 / Changing market regimes</span><h4>Walk-Forward Optimization (Rolling Windows)</h4>
+<p>Market microstructure is non-stationary: a model trained on 2008 data decays and is far less relevant by 2024.</p>
+<p>So instead of a static train-test split, we run a dynamic temporal loop. The models train on past data and predict exactly 6 months ahead. Then we roll the training window forward to absorb those 6 months and predict the next block. This lets the algorithms keep adapting to the shifting volatility regimes of the NIFTY-50.</p></div>
 <div class="box cycle"><p class="lbl">Six-month walk-forward cycle</p>
  <div class="flow">
   <div class="tile"><span class="k">Step 01</span><strong>Train on history</strong><small>Past observations only</small></div><span class="arr" aria-hidden="true">&rarr;</span>
   <div class="tile"><span class="k">Step 02</span><strong>Predict 6 months</strong><small>Next unseen block</small></div><span class="arr" aria-hidden="true">&rarr;</span>
-  <div class="tile"><span class="k">Step 03</span><strong>Roll forward</strong><small>Incorporate new history</small></div>
+  <div class="tile"><span class="k">Step 03</span><strong>Roll forward</strong><small>Take in the new history</small></div>
  </div><p class="repeat">&#8635; Repeat for the next six-month block</p>
- <p class="note">Each forecast block is produced before that block&rsquo;s target outcomes are used for subsequent training.</p></div>
+ <p class="note">Each block is forecast before its actual outcomes are used for any further training.</p></div>
 </div></div></div></section>
 
 <!-- 05 -->
-<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p5" id="h5b"><span class="num">05</span><span class="ttl">Models Trained</span><span class="pm"></span></button></h2>
+<section class="acc" id="s5"><h2><button class="head" aria-expanded="false" aria-controls="p5" id="h5b"><span class="num">05</span><span class="ttl">Models Trained</span><span class="pm"></span></button></h2>
 <div class="panel" id="p5" role="region" aria-labelledby="h5b"><div><div class="body">
 <div class="box" style="margin-top:8px"><p class="lbl">The model lineup</p>
  <div class="root"><small>Forecasting task</small><b>5-day forward volatility</b></div><div class="trunk"></div>
@@ -284,8 +301,43 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   <div class="tile"><span class="k">02 / Bagging</span><strong>Random Forest</strong><ul><li>Random Forest&ndash;Static</li><li>Random Forest&ndash;Rolling</li></ul></div>
   <div class="tile"><span class="k">03 / Boosting</span><strong>XGBoost</strong><ul><li>XGBoost&ndash;Static</li><li>XGBoost&ndash;Rolling</li></ul></div>
  </div>
- <p class="note">Six trained models: two reference baselines and two training regimes for each tree-ensemble architecture.</p></div>
-<div class="defs"><div><b>Static</b><span>Fixed historical training setup.</span></div><div><b>Rolling</b><span>Walk-forward updates with six-month prediction blocks.</span></div></div>
+ <p class="note">Six models in total: two reference baselines, and two training setups for each tree ensemble.</p></div>
+<div class="defs"><div><b>Static</b><span>A fixed historical training window.</span></div><div><b>Rolling</b><span>Walk-forward updates with six-month prediction blocks.</span></div></div>
+</div></div></div></section>
+
+<!-- 06 -->
+<section class="acc" id="s6"><h2><button class="head" aria-expanded="false" aria-controls="p6" id="h6b"><span class="num">06</span><span class="ttl">Evaluation Design and Metrics</span><span class="pm"></span></button></h2>
+<div class="panel" id="p6" role="region" aria-labelledby="h6b"><div><div class="body">
+<h3>The Split and Validation Design</h3>
+<p>Financial time series can&rsquo;t be randomly shuffled, so we split the data chronologically into a Training Set (2008&ndash;2018), a Validation Set (2019) and a completely unseen Test Set (2020&ndash;2026).</p>
+<p>To keep the splits clean we enforced a 5-day boundary purge. The target looks 5 days ahead, so the last 5 days of 2018 share data with the first 5 days of 2019. We dropped those overlapping rows (<code>head(-5)</code>) before any scaling or training.</p>
+<div class="box"><p class="lbl">Chronological split</p>
+ <div class="split tl"><div class="tr1">Train<small>2008&ndash;2018</small></div><div class="pg">Purge<br>5 days</div><div>Validation<small>2019</small></div><div class="test">Test<small>2020&ndash;2026</small></div></div>
+ <p class="note">Schematic, not to scale. The test set is never touched during tuning.</p></div>
+
+<h3>The Validation Journey: Tuning vs Final Testing</h3>
+<p>Hyperparameter tuning was kept strictly separate from testing. Everything was evaluated only on the 2019 Validation Set.</p>
+
+<div class="card"><span class="k">Custom Random Forest / 2D grid search</span><h4>Depth 5, Min Split 2</h4>
+<p>We searched across <code>max_depth</code> (3 to 13) and <code>min_sample_split</code> (2 to 25). The 2D validation curve shows that deeper trees overfit the noise of the 2008 crisis in the training data almost immediately, and validation MSE spikes. So we locked in Depth 5 with a Min Split of 2.</p>
+<figure class="fig"><img src="images/rf_2d_tuning_curve.png" onerror="this.onerror=null;this.src='images/rd_2d_tuning_curve.png'" alt="2D validation curve for the Random Forest grid search over max_depth and min_sample_split" loading="lazy"><figcaption>Validation MSE across <code>max_depth</code> and <code>min_sample_split</code>.</figcaption></figure></div>
+
+<div class="card"><span class="k">Custom XGBoost / 3D grid search</span><h4>Depth 3, 30 Estimators, &lambda; = 10</h4>
+<p>We mapped Depth (2&ndash;6), Trees (10&ndash;50) and L2 Lambda (0.1 to 1000) against the Pseudo-Huber loss. The raw minimum sits at depth 3, 50 estimators and &lambda; = 10. But the curve has a visible elbow at around 30 estimators, with no meaningful drop in loss after that. So we picked Depth 3, 30 Estimators and &lambda; = 10.0.</p>
+<figure class="fig"><img src="images/xgboost_tuning_curve.png" alt="Validation curves for the XGBoost grid search over depth, number of trees and L2 lambda" loading="lazy"><figcaption>Validation loss across depth, number of trees and L2 lambda.</figcaption></figure></div>
+
+<div class="card"><span class="k">Ridge Regression / logarithmic grid</span><h4>&lambda; = 6000</h4>
+<p>We evaluated a logarithmic grid of &lambda; values (0.001 to 10,000) and looked for the lowest validation MSE. The minimum landed at &lambda; = 6000.</p>
+<figure class="fig"><img src="images/lambda_tuning_curve.png" alt="Validation MSE of Ridge Regression across a logarithmic grid of lambda values" loading="lazy"><figcaption>Validation MSE across the &lambda; grid.</figcaption></figure></div>
+
+<div class="tbl" style="margin-top:28px">
+ <div class="tr"><span>Model</span><span>Locked hyperparameters</span></div>
+ <div class="tr"><b>Random Forest</b><span>Depth 5, Min Split 2</span></div>
+ <div class="tr"><b>XGBoost</b><span>Depth 3, 30 Estimators, &lambda; = 10.0 (Pseudo-Huber loss)</span></div>
+ <div class="tr"><b>Ridge</b><span>&lambda; = 6000</span></div>
+</div>
+
+<div class="callout"><p class="lbl">Retraining for the final test</p><p>Once the grid searches were done, the parameters were locked for good. To give the models the most exposure to the latest pre-Covid market regime, we retrained them fresh on the <i>combined</i> 2008&ndash;2019 data, then ran the final out-of-sample tests on 2020&ndash;2026.</p></div>
 </div></div></div></section>
 </main>
 
