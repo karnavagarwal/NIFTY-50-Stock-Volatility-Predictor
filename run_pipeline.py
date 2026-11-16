@@ -35,19 +35,19 @@ def main():
         "split_and_scale.py",
         
         # 2. Baseline Predictions
-        "naive_persistence_predictions_2.py",
+        "naive_persistence_predictions.py",
         "linear_regression_prediction.py",
         
         # 3. Static ML Predictions (2008-2019 Train -> 2020-2026 Test)
-        "random_forest_prediction_2.py",
-        "xgboost_prediction_4.py",
+        "random_forest_prediction.py",
+        "xgboost_prediction.py",
         
         # 4. Walk-Forward Rolling ML Predictions (6-Month Adapting Windows)
         "random_forst_rolling_prediction.py",
         "xgboost_rolling_prediction.py",
         
         # 5. Final Evaluation & High-Res Visual Generation
-        "evaluate_models_2.py"
+        "evaluate_models.py"
     ]
     
     total_start = time.time()
