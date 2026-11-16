@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIFTY-50 Stock Volatility Prediction | ES335 Course Project</title>
+<meta name="description" content="ES335 course project: forecasting 5-day forward volatility of NIFTY-50 stocks with tree-based models.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#f9f8f6;--surface:#fff;--panel:#eff3f8;--ink:#1c2a3a;--mute:#566274;--line:#dcdfe4;--accent:#1d5ca8;--accent-soft:#e8eff9;--navy:#172b47;--navy-ink:#fff;--warn-bg:#fdf1e4;--warn:#a85a14;--code:#eef1f5;--font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--serif:"Cambria","Georgia",serif}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40}}
+:root[data-theme=dark]{--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+a,button{color:inherit}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+code{font-family:var(--mono);font-size:.84em;background:var(--code);padding:2px 6px;border-radius:5px}
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;font-weight:700}
+.logo{width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--surface);display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:5px}
+.logo i{display:block;width:4px;background:var(--accent);border-radius:1px}
+.topr{display:flex;align-items:center;gap:20px}
+.tag{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--mute)}
+.icon-btn{width:44px;height:44px;border:1px solid var(--line);background:var(--surface);border-radius:10px;display:grid;place-items:center}
+.icon-btn:hover{border-color:var(--accent)}
+/* hero */
+.authors{display:flex;flex-wrap:wrap;gap:8px 36px;padding:28px 0 0;font-weight:600}
+.authors span{display:flex;gap:10px;align-items:baseline}
+.authors small{font:400 .82rem var(--mono);color:var(--mute)}
+.kicker{display:flex;align-items:center;gap:12px;margin:64px 0 18px;color:var(--accent);font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.kicker:before{content:"";width:24px;height:2px;background:var(--accent)}
+h1{margin:0;font-size:clamp(2.6rem,7.4vw,4.6rem);line-height:1.04;letter-spacing:-.035em;font-weight:800}
+h1 em{font-style:normal;color:var(--accent)}
+.facts{margin:32px 0 0;color:var(--mute)}
+.facts b{font-weight:500;margin:0 12px;opacity:.5}
+/* index */
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:72px 0 20px}
+.link{background:none;border:0;color:var(--accent);font-weight:600;padding:8px 0}
+.link:hover{text-decoration:underline}
+.acc{border-top:1px solid var(--line)}
+.acc:last-of-type{border-bottom:1px solid var(--line)}
+.acc>h2{margin:0}
+.head{width:100%;display:flex;align-items:center;gap:20px;text-align:left;background:none;border:0;padding:28px 0}
+.num{font:.78rem var(--mono);color:var(--accent);width:36px;flex:none}
+.ttl{flex:1;font-size:clamp(1.15rem,2.4vw,1.45rem);font-weight:650;letter-spacing:-.01em}
+.pm{width:34px;height:34px;flex:none;border:1px solid var(--line);border-radius:50%;background:var(--surface);position:relative;transition:border-color .2s}
+.head:hover .pm{border-color:var(--accent)}
+.pm:before,.pm:after{content:"";position:absolute;left:50%;top:50%;width:12px;height:2px;background:var(--accent);transform:translate(-50%,-50%);transition:transform .25s}
+.pm:after{transform:translate(-50%,-50%) rotate(90deg)}
+.head[aria-expanded=true] .pm:after{transform:translate(-50%,-50%) rotate(0)}
+.panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s ease}
+.panel.open{grid-template-rows:1fr}
+.panel>div{overflow:hidden;min-height:0}
+.body{padding:4px 0 56px 56px}
+.body h3{font-size:1.4rem;margin:44px 0 14px;letter-spacing:-.01em;line-height:1.25}
+.body h3:first-child{margin-top:8px}
+.body p{max-width:68ch;margin:0 0 14px}
+.body ol{padding-left:0;list-style:none;counter-reset:n;margin:0}
+/* components */
+.eq{background:var(--panel);border-radius:10px;padding:22px 24px;margin:18px 0;font:1.1rem var(--serif);text-align:center;overflow-x:auto}
+.eq sub{font-size:.7em}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin:28px 0}
+.lbl{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--mute);margin:0 0 18px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.tile.hi{border-color:var(--accent);border-width:1.5px}
+.tile .k{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+.tile strong{display:block;margin:4px 0 2px}
+.tile small{color:var(--mute)}
+.flow{display:flex;align-items:stretch;gap:12px}
+.flow>.tile{flex:1}
+.arr{align-self:center;color:var(--accent);font-size:1.4rem;flex:none}
+.note{font-size:.9rem;color:var(--mute);margin:18px 0 0}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:20px 24px;border-radius:0 10px 10px 0;margin:28px 0}
+.callout .lbl{color:var(--accent);margin-bottom:6px}
+.callout p{margin:0}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:22px 0}
+.chips code{display:block;background:none;padding:0;margin-top:2px;color:var(--mute)}
+.tbl{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:18px 0;background:var(--surface)}
+.tr{display:grid;grid-template-columns:200px 1fr;border-top:1px solid var(--line)}
+.tr:first-child{border-top:0;background:var(--panel);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.tr>*{padding:16px 22px}
+.tr>b{font-weight:650}
+.q{counter-increment:n;margin:0 0 26px}
+.q h4{margin:0 0 6px;font-size:1.02rem}
+.q h4:before{content:counter(n) ".";color:var(--accent);margin-right:10px}
+.q p,.q pre{margin-left:26px}
+pre{background:var(--code);border-radius:8px;padding:14px 18px;font:.88rem var(--mono);overflow-x:auto;margin-top:6px;margin-bottom:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px 26px;margin:0 0 16px}
+.card .k{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.card h4{margin:6px 0 10px;font-size:1.15rem}
+.card p{margin:0 0 10px}
+.card .eq{margin:12px 0;padding:14px 18px;font-size:1rem;text-align:left}
+.card .sub{font:.78rem var(--mono);color:var(--mute);margin:-6px 0 12px}
+.card .n{display:inline-block;font:.75rem var(--mono);background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:6px;margin-right:10px}
+.pipe{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
+.chip{display:inline-block;font:.8rem var(--mono);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:4px 10px;margin:0 6px 8px 0}
+.feat{list-style:none;margin:10px 0 0!important;padding:0;font:.8rem var(--mono)}
+.feat li:before{content:"+";color:var(--accent);margin-right:8px}
+.feat li{margin:6px 0}
+.target{background:var(--navy);color:var(--navy-ink);border-radius:10px;padding:16px 22px;margin-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 20px;font-size:.92rem}
+.target code{background:none;color:inherit}
+.split{display:grid;grid-template-columns:3fr .8fr 1.4fr .8fr 1.2fr;gap:6px}
+.split div{border-radius:8px;padding:16px 8px;text-align:center;font-size:.88rem;background:var(--surface);border:1px solid var(--line)}
+.split .tr1{background:var(--navy);color:var(--navy-ink);border-color:var(--navy)}
+.split .pg{background:var(--warn-bg);border:1px dashed var(--warn);color:var(--warn);font-size:.78rem;font-weight:600}
+.cycle .repeat{text-align:center;margin:16px 0 0;color:var(--accent);font-weight:600}
+.root{max-width:320px;margin:0 auto;background:var(--navy);color:var(--navy-ink);border-radius:10px;padding:18px 24px;text-align:center}
+.root small{display:block;font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.8}
+.root b{font-size:1.15rem}
+.trunk{width:2px;height:24px;background:var(--line);margin:0 auto}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-top:2px solid var(--line);padding-top:24px;position:relative}
+.three .tile ul{list-style:none;margin:12px 0 0;padding:0}
+.three .tile li{border-top:1px solid var(--line);padding:12px 0 2px;margin-top:10px}
+.three .tile li:before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:10px;vertical-align:middle}
+.three .tile strong{font-size:1.2rem;margin:4px 0 0}
+.defs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+.defs b{display:block}
+.defs span{color:var(--mute);font-size:.95rem}
+footer{padding:48px 0 64px;color:var(--mute);font-size:.88rem}
+footer code{background:none;padding:0;display:block;margin-top:4px}
+@media(max-width:760px){
+.wrap{padding:0 20px}
+.tag{display:none}
+.kicker{margin-top:44px}
+.bar{margin-top:48px}
+.num{width:28px}
+.head{gap:12px;padding:22px 0}
+.body{padding:0 0 40px}
+.flow{flex-direction:column}
+.arr{transform:rotate(90deg)}
+.chips{grid-template-columns:1fr 1fr}
+.tr{grid-template-columns:1fr}
+.tr:first-child{display:none}
+.tr>*{padding:12px 18px}
+.tr>b{padding-bottom:0}
+.pipe{grid-template-columns:1fr}
+.pipe .arr{transform:rotate(90deg);justify-self:center}
+.three,.defs{grid-template-columns:1fr}
+.split{grid-template-columns:1fr}
+.box{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+ <div class="brand"><span class="logo" aria-hidden="true"><i style="height:6px"></i><i style="height:11px"></i><i style="height:16px"></i></span>ES335 Course Project</div>
+ <div class="topr"><span class="tag">Machine Learning / Financial Markets</span>
+ <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+</header>
+
+<div class="authors"><span>Karnav Agarwal <small>25110158</small></span><span>Shubham Ruparel <small>25110278</small></span></div>
+
+<main>
+<p class="kicker">Volatility, not direction</p>
+<h1>NIFTY-50 Stock <em>Volatility Prediction.</em></h1>
+<p class="facts">5 equities<b>/</b>5-day forecast horizon<b>/</b>6 models</p>
+
+<div class="bar"><span class="tag">Explore the project / 01&mdash;05</span><button class="link" id="all" type="button">Expand all &#8599;</button></div>
+
+<!-- 01 -->
+<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p1" id="h1b"><span class="num">01</span><span class="ttl">Problem Formulation and Scope</span><span class="pm"></span></button></h2>
+<div class="panel" id="p1" role="region" aria-labelledby="h1b"><div><div class="body">
+<h3>The Precise Question</h3>
+<p>Can custom machine learning architectures, specifically those centered around trees, like Random Forests and XGBoost, accurately forecast the 5-day forward volatility of major NIFTY-50 equities? Will they remain stable during extreme macro-shocks like the March 2020 COVID-19 crash?</p>
+<h3>Target and Unit</h3>
+<p>The target variable is <code>Target_Vol_5d</code>. Its unit is the annualized standard deviation of daily log returns, calculated over a 5-day window and multiplied by &radic;252.</p>
+<div class="eq">Target_Vol_5d<sub>t</sub> &nbsp;=&nbsp; &radic;252 &middot; s(r<sub>t+1</sub>, &hellip;, r<sub>t+5</sub>)</div>
+<h3>Prediction-time Information</h3>
+<p>The models are strictly limited to the data available at the market close of day <i>t</i>, the day on which the 5-day forward volatility prediction is made. All engineered features, such as 5-day cumulative returns, 21-day trailing volatility, and 3-day/21-day volume ratios, use only historical data up to <i>t</i>. The target is the volatility from <i>t+1</i> to <i>t+5</i>.</p>
+<p>To prevent future-data leakage, the pipeline purges the 5-day overlapping boundaries between training and validation sets. A 6-month walk-forward rolling optimization is used for the final testing phase.</p>
+<div class="box"><p class="lbl">The forecasting boundary</p>
+<div class="flow">
+ <div class="tile"><span class="k">Historical information</span><strong>Features through day t</strong><small>Returns &middot; volatility &middot; volume</small></div><span class="arr" aria-hidden="true">&rarr;</span>
+ <div class="tile"><span class="k">Prediction point</span><strong>Market close &middot; t</strong><small>No future inputs</small></div><span class="arr" aria-hidden="true">&rarr;</span>
+ <div class="tile"><span class="k">Future target</span><strong>Days t+1 &rarr; t+5</strong><small>Annualized realized volatility</small></div>
+</div><p class="note">Inputs end at the prediction point. The target is calculated from the next five trading days.</p></div>
+<h3>Limits of the Claim</h3>
+<p>The models predict the <b>magnitude</b> of volatility, not exact daily micro-directional price movements. The project reports approximately 52% Mean Directional Accuracy (MDA) and an out-of-sample R&sup2; of approximately 0.29. These results indicate captured variance and a slight directional edge over a coin flip, while remaining bounded by the noise of overlapping financial time series.</p>
+<div class="callout"><p class="lbl">Scope</p><p>Five highly liquid, large-cap NIFTY-50 constituents&mdash;Reliance, TCS, ITC, Maruti, and HDFC Bank&mdash;between 2008 and 2026.</p></div>
+</div></div></div></section>
+
+<!-- 02 -->
+<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p2" id="h2b"><span class="num">02</span><span class="ttl">Data Understanding</span><span class="pm"></span></button></h2>
+<div class="panel" id="p2" role="region" aria-labelledby="h2b"><div><div class="body">
+<h3>Source and Access Limits</h3>
+<p>The project uses historical market data for National Stock Exchange (NSE) equities, downloaded through the <code>yfinance</code> Python API. The publicly accessible historical dataset, January 2008 to October 2026, was downloaded and stored locally as <code>raw_data.csv</code> to avoid API rate limits and network latency during training.</p>
+<h3>Row Meaning</h3>
+<p>Each row represents a single trading day&rsquo;s aggregated market activity for a specific NIFTY-50 constituent. Non-trading days, including weekends and exchange holidays, are naturally excluded.</p>
+<div class="chips">
+ <div class="tile"><strong>Reliance</strong><code>RELIANCE.NS</code></div><div class="tile"><strong>TCS</strong><code>TCS.NS</code></div><div class="tile"><strong>ITC</strong><code>ITC.NS</code></div><div class="tile"><strong>Maruti</strong><code>MARUTI.NS</code></div><div class="tile"><strong>HDFC Bank</strong><code>HDFCBANK.NS</code></div>
+</div>
+<h3>Important Variables</h3>
+<div class="tbl">
+ <div class="tr"><span>Variable group</span><span>Contents</span></div>
+ <div class="tr"><b>Raw variables</b><span>Date, Ticker, Open, High, Low, Close, Volume</span></div>
+ <div class="tr"><b>Engineered features</b><span>Daily Log Return; Intraday Range; 5-Day and 21-Day Trailing Volatility (annualized); 3-Day/21-Day Volume Ratio; 5-Day Cumulative Return</span></div>
+ <div class="tr"><b>Target variable</b><span><code>Target_Vol_5d</code>: annualized standard deviation of daily log returns over the future 5-day window</span></div>
+</div>
+<h3>Relevant Quality Checks</h3>
+<ol>
+ <li class="q"><h4>Holiday Padding Removal</h4><p>The project identifies zero-volume rows with Open = High = Low = Close as artificial holiday padding. A strict filter removes these rows.</p><pre>df = df[df['Volume'] &gt; 0]</pre></li>
+ <li class="q"><h4>Edge-Case NaN Dropping</h4><p>Rolling calculations for features, such as 21-day trailing volatility, and the 5-day forward target generate NaN values at the dataset edges. These rows are dropped instead of using forward-fill or backward-fill.</p><pre>df = df.dropna()</pre></li>
+ <li class="q"><h4>Leakage-Free Scaling</h4><p>An object-oriented <code>StandardScaler</code> was implemented from scratch. It calculates the mean and variance on the 2008&ndash;2018 training data and applies the same static transformation to validation and test sets, keeping their distributions out of the scaling fit.</p></li>
+</ol>
+</div></div></div></section>
+
+<!-- 03 -->
+<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p3" id="h3b"><span class="num">03</span><span class="ttl">Preprocessing and Statistical Reasoning</span><span class="pm"></span></button></h2>
+<div class="panel" id="p3" role="region" aria-labelledby="h3b"><div><div class="body">
+<div class="box" style="margin-top:8px"><p class="lbl">From raw data to model-ready features</p>
+ <div class="pipe">
+  <div class="tile"><span class="k">01 / Original variables</span><strong>Daily market data</strong>
+   <span class="chip">Date</span><span class="chip">Ticker</span><span class="chip">Open</span><span class="chip">High</span><span class="chip">Low</span><span class="chip">Close</span><span class="chip">Volume</span></div>
+  <div class="arr" style="text-align:center"><span aria-hidden="true">&rarr;</span><br><small style="font-size:.78rem;color:var(--mute)">Clean<br>Transform<br>Align</small></div>
+  <div class="tile hi"><span class="k">02 / Model inputs</span><strong>Six engineered features</strong>
+   <ul class="feat"><li>DailyLogReturn</li><li>IntradayRange</li><li>Vol_5d</li><li>Vol_21d</li><li>VolumeRatio</li><li>5dayCumReturn</li></ul></div>
+ </div>
+ <div class="target"><span>Separate prediction target</span><code>Target_Vol_5d</code><span>Future window &middot; t+1 to t+5</span></div>
+ <p class="note">Date and Ticker identify and order the observations; the six engineered variables form the model inputs. The future target is kept separate.</p></div>
+
+<h3>Justification of Transformations</h3>
+<div class="card"><p><span class="n">01</span><b>Logarithmic Returns</b></p><p class="sub">DailyLogReturn</p><div class="eq">ln(Close<sub>t</sub> / Close<sub>t&minus;1</sub>)</div><p>Log returns are time-additive, making them useful for aggregating returns and calculating volatility.</p></div>
+<div class="card"><p><span class="n">02</span><b>Market Friction Proxy</b></p><p class="sub">IntradayRange</p><div class="eq">(High &minus; Low) / Close</div><p>Dividing the absolute daily range by the closing price normalizes intraday price action, creating a scale-invariant proxy for daily micro-volatility.</p></div>
+<div class="card"><p><span class="n">03</span><b>Volatility Annualization</b></p><p class="sub">Vol_5d &middot; Vol_21d &middot; Target_Vol_5d</p><div class="eq">s<sub>rolling</sub>(log returns) &times; &radic;252</div><p>The rolling sample standard deviation uses N&minus;1 degrees of freedom. Multiplication by &radic;252 scales the local volatility to an annualized metric. The target uses the same formulation over the future 5-day window.</p></div>
+<div class="card"><p><span class="n">04</span><b>Volume Summaries</b></p><p class="sub">VolumeRatio</p><div class="eq">mean<sub>3-day</sub>(Volume) / mean<sub>21-day</sub>(Volume)</div><p>Raw trading volume is non-stationary and can trend over decades. The ratio of a 3-day short-term average to a 21-day baseline isolates relative liquidity surges and reduces scale effects.</p></div>
+<div class="card"><p><span class="n">05</span><b>Momentum Aggregation</b></p><p class="sub">5dayCumReturn</p><div class="eq">&Sigma;<sub>i=0&hellip;4</sub> DailyLogReturn<sub>t&minus;i</sub></div><p>Because log returns are time-additive, a rolling 5-day sum provides an aggregate of short-term directional momentum.</p></div>
+
+<h3>Leakage-Free Standard Scaling</h3>
+<p>Features were transformed using Z-score standardization:</p>
+<div class="eq">Z = (X &minus; &mu;<sub>train</sub>) / &sigma;<sub>train</sub></div>
+<p>The custom object-oriented <code>StandardScaler</code> calculates the mean (&mu;) and standard deviation (&sigma;) only on the 2008&ndash;2018 training set. Validation and test sets are transformed using these frozen training statistics, preventing future distributions from leaking into preprocessing.</p>
+
+<h3>The Overlapping Boundary Purge</h3>
+<p>Because the target looks 5 days into the future, a chronological split alone can allow training targets to cross into the validation period. The final training observations must be purged at the boundary.</p>
+<p>The pipeline uses <code>.groupby('Ticker').head(-5)</code> to drop the final five rows per ticker from the training and validation splits before scaling. The project also describes boundary handling for 21-day windows.</p>
+<div class="box"><p class="lbl">Temporal split discipline</p>
+ <div class="split"><div class="tr1">Training data</div><div class="pg">Purge<br>5 days</div><div>Validation data</div><div class="pg">Purge<br>5 days</div><div>Test data</div></div>
+ <p class="note">Schematic, not to scale. Purging removes observations whose forward-looking targets cross a split boundary.</p></div>
+</div></div></div></section>
+
+<!-- 04 -->
+<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p4" id="h4b"><span class="num">04</span><span class="ttl">Baseline and Method Selection</span><span class="pm"></span></button></h2>
+<div class="panel" id="p4" role="region" aria-labelledby="h4b"><div><div class="body">
+<h3>Meaningful Baselines</h3>
+<div class="card"><span class="k">Baseline 01</span><h4>Naive Persistence</h4>
+<p>A one-day shift of the target is not a valid real-time forecast: adjacent 5-day target windows share 80% of their returns, and the previous day&rsquo;s forward target is not yet known. The project observed an artificially inflated out-of-sample R&sup2; of 0.77 with this overlapping-target approach.</p>
+<p>The implemented persistence baseline instead predicts that future 5-day volatility will equal the trailing 5-day historical volatility feature, <code>Vol_5d</code>. It provides an available-at-prediction-time reference against which the machine learning models can be compared.</p>
+<div class="eq">Predicted Target_Vol_5d<sub>t</sub> = Vol_5d<sub>t</sub></div></div>
+<div class="card"><span class="k">Baseline 02</span><h4>Ridge Regression</h4>
+<p>Financial features, such as 5-day and 21-day trailing volatilities, can be multicollinear. A custom Ridge Regression solver establishes a linear performance floor, using an L2 penalty to stabilize weights and reduce overfitting relative to unregularized ordinary least squares.</p></div>
+
+<h3>Method Choices and Assumptions</h3>
+<div class="card"><span class="k">01 / Extreme macro-outliers</span><h4>Custom XGBoost with Pseudo-Huber Loss</h4>
+<p>Financial markets contain extreme macro-outliers, including the March 2020 COVID-19 crash. Squared-error loss gives large errors a strong gradient, potentially placing excessive emphasis on volatility spikes.</p>
+<p>The custom XGBoost engine optimizes Pseudo-Huber loss. It behaves quadratically near zero and approximately linearly for large errors, limiting the influence of extreme residuals. This is the project&rsquo;s robustness mechanism for crash conditions.</p></div>
+<div class="card"><span class="k">02 / Non-linear relationships</span><h4>Custom Random Forest</h4>
+<p>Liquidity surges (Volume Ratio) and price friction (Intraday Range) may have non-linear relationships. A decision-tree ensemble was built from scratch using variance reduction for node splitting.</p>
+<p>Bootstrap aggregating (bagging) and subset feature selection, <code>max_features='sqrt'</code>, diversify the trees and reduce overfitting to noise in individual historical events, such as the 2008 financial crisis.</p></div>
+<div class="card"><span class="k">03 / Changing market regimes</span><h4>Walk-Forward Optimization</h4>
+<p>Market microstructures are non-stationary: models trained on older data may lose relevance over time. The project therefore extends the static train-test setup with a rolling temporal loop.</p>
+<p>Models train on past data, predict the next 6 months, then move forward to incorporate newly observed data before predicting the next block. This process allows adaptation to changing NIFTY-50 volatility regimes.</p></div>
+<div class="box cycle"><p class="lbl">Six-month walk-forward cycle</p>
+ <div class="flow">
+  <div class="tile"><span class="k">Step 01</span><strong>Train on history</strong><small>Past observations only</small></div><span class="arr" aria-hidden="true">&rarr;</span>
+  <div class="tile"><span class="k">Step 02</span><strong>Predict 6 months</strong><small>Next unseen block</small></div><span class="arr" aria-hidden="true">&rarr;</span>
+  <div class="tile"><span class="k">Step 03</span><strong>Roll forward</strong><small>Incorporate new history</small></div>
+ </div><p class="repeat">&#8635; Repeat for the next six-month block</p>
+ <p class="note">Each forecast block is produced before that block&rsquo;s target outcomes are used for subsequent training.</p></div>
+</div></div></div></section>
+
+<!-- 05 -->
+<section class="acc"><h2><button class="head" aria-expanded="false" aria-controls="p5" id="h5b"><span class="num">05</span><span class="ttl">Models Trained</span><span class="pm"></span></button></h2>
+<div class="panel" id="p5" role="region" aria-labelledby="h5b"><div><div class="body">
+<div class="box" style="margin-top:8px"><p class="lbl">The model lineup</p>
+ <div class="root"><small>Forecasting task</small><b>5-day forward volatility</b></div><div class="trunk"></div>
+ <div class="three">
+  <div class="tile"><span class="k">01 / Reference</span><strong>Baselines</strong><ul><li>Naive Persistence</li><li>Ridge Linear Regression</li></ul></div>
+  <div class="tile"><span class="k">02 / Bagging</span><strong>Random Forest</strong><ul><li>Random Forest&ndash;Static</li><li>Random Forest&ndash;Rolling</li></ul></div>
+  <div class="tile"><span class="k">03 / Boosting</span><strong>XGBoost</strong><ul><li>XGBoost&ndash;Static</li><li>XGBoost&ndash;Rolling</li></ul></div>
+ </div>
+ <p class="note">Six trained models: two reference baselines and two training regimes for each tree-ensemble architecture.</p></div>
+<div class="defs"><div><b>Static</b><span>Fixed historical training setup.</span></div><div><b>Rolling</b><span>Walk-forward updates with six-month prediction blocks.</span></div></div>
+</div></div></div></section>
+</main>
+
+<footer>ES335 &middot; Karnav Agarwal &amp; Shubham Ruparel<code>NIFTY-50 / VOLATILITY STUDY</code></footer>
+</div>
+
+<script>
+(function(){
+ var heads=[].slice.call(document.querySelectorAll('.head')),all=document.getElementById('all');
+ function set(h,open){h.setAttribute('aria-expanded',open);document.getElementById(h.getAttribute('aria-controls')).classList.toggle('open',open)}
+ function sync(){var every=heads.every(function(h){return h.getAttribute('aria-expanded')==='true'});all.innerHTML=every?'Collapse all &#8599;':'Expand all &#8599;';all.dataset.open=every}
+ heads.forEach(function(h){h.addEventListener('click',function(){set(h,h.getAttribute('aria-expanded')!=='true');sync()})});
+ all.addEventListener('click',function(){var o=all.dataset.open!=='true';heads.forEach(function(h){set(h,o)});sync()});
+ if(location.hash){var t=document.querySelector(location.hash.replace(/[^#\w-]/g,''));var h=t&&t.querySelector&&t.querySelector('.head');if(h)set(h,true)}
+ var root=document.documentElement,btn=document.getElementById('theme');
+ try{var s=localStorage.getItem('theme');if(s)root.dataset.theme=s}catch(e){}
+ btn.addEventListener('click',function(){var dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;var n=dark?'light':'dark';root.dataset.theme=n;try{localStorage.setItem('theme',n)}catch(e){}});
+})();
+</script>
+</body>
+</html>
