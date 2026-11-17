@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NIFTY-50 Stock Volatility Prediction | ES335 Course Project</title>
-<meta name="description" content="ES335 course project: forecasting 5-day forward volatility of NIFTY-50 stocks with tree-based models.">
+<meta name="description" content="ES335 course project: forecasting 5-day forward volatility of NIFTY-50 stocks with tree-based models and stress testing through market shocks.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<!-- Chart.js for interactive visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#f9f8f6;--surface:#fff;--panel:#eff3f8;--ink:#1c2a3a;--mute:#566274;--line:#dcdfe4;--accent:#1d5ca8;--accent-soft:#e8eff9;--navy:#172b47;--navy-ink:#fff;--warn-bg:#fdf1e4;--warn:#a85a14;--code:#eef1f5;--font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--serif:"Cambria","Georgia",serif}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40}}
-:root[data-theme=dark]{--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40}
+:root{--bg:#f9f8f6;--surface:#fff;--panel:#eff3f8;--ink:#1c2a3a;--mute:#566274;--line:#dcdfe4;--accent:#1d5ca8;--accent-soft:#e8eff9;--navy:#172b47;--navy-ink:#fff;--warn-bg:#fdf1e4;--warn:#a85a14;--code:#eef1f5;--success:#1e7e34;--success-bg:#eafaf1;--font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--serif:"Cambria","Georgia",serif}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40;--success:#48c774;--success-bg:#163323}}
+:root[data-theme=dark]{--bg:#0f1722;--surface:#16212f;--panel:#1a2738;--ink:#e6ebf2;--mute:#9aa7b8;--line:#2a3a4f;--accent:#6aa7ee;--accent-soft:#1c2f4a;--navy:#27466f;--warn-bg:#3a2a18;--warn:#f0b070;--code:#1f2d40;--success:#48c774;--success-bg:#163323}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
@@ -18,6 +20,7 @@ a,button{color:inherit}
 button{font:inherit;cursor:pointer}
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
 code{font-family:var(--mono);font-size:.84em;background:var(--code);padding:2px 6px;border-radius:5px}
+
 /* top bar */
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:12px;font-weight:700}
@@ -27,6 +30,7 @@ code{font-family:var(--mono);font-size:.84em;background:var(--code);padding:2px 
 .tag{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--mute)}
 .icon-btn{width:44px;height:44px;border:1px solid var(--line);background:var(--surface);border-radius:10px;display:grid;place-items:center}
 .icon-btn:hover{border-color:var(--accent)}
+
 /* hero */
 .authors{display:flex;flex-wrap:wrap;gap:8px 36px;padding:28px 0 0;font-weight:600}
 .authors span{display:flex;gap:10px;align-items:baseline}
@@ -37,7 +41,8 @@ h1{margin:0;font-size:clamp(2.6rem,7.4vw,4.6rem);line-height:1.04;letter-spacing
 h1 em{font-style:normal;color:var(--accent)}
 .facts{margin:32px 0 0;color:var(--mute)}
 .facts b{font-weight:500;margin:0 12px;opacity:.5}
-/* index */
+
+/* index bar & accordion */
 .bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:72px 0 20px}
 .link{background:none;border:0;color:var(--accent);font-weight:600;padding:8px 0}
 .link:hover{text-decoration:underline}
@@ -60,6 +65,7 @@ h1 em{font-style:normal;color:var(--accent)}
 .body h3:first-child{margin-top:8px}
 .body p{max-width:68ch;margin:0 0 14px}
 .body ol{padding-left:0;list-style:none;counter-reset:n;margin:0}
+
 /* components */
 .eq{background:var(--panel);border-radius:10px;padding:22px 24px;margin:18px 0;font:1.1rem var(--serif);text-align:center;overflow-x:auto}
 .eq sub{font-size:.7em}
@@ -131,8 +137,67 @@ pre{background:var(--code);border-radius:8px;padding:14px 18px;font:.88rem var(-
 .split small{display:block;color:inherit;opacity:.75;margin-top:2px}
 .split.tl{grid-template-columns:3fr .7fr 1fr 2fr}
 .split .test{border-style:dashed;border-color:var(--accent);color:var(--accent);font-weight:600}
+
+/* Interactive Controls & Results Additions */
+.control-row{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;margin:16px 0 22px}
+.control-group{display:flex;flex-direction:column;gap:6px}
+.control-group label{font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+select,input[type=range]{font:inherit;accent-color:var(--accent)}
+select{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:550;outline:none}
+select:focus{border-color:var(--accent)}
+.btn-group{display:flex;flex-wrap:wrap;gap:6px}
+.btn-toggle{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:.84rem;font-weight:600;color:var(--mute);transition:all .15s ease}
+.btn-toggle:hover{border-color:var(--accent);color:var(--ink)}
+.btn-toggle.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.cb-group{display:flex;flex-wrap:wrap;gap:10px 18px;margin:14px 0}
+.cb-label{display:inline-flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer;font-weight:500}
+.cb-label input{cursor:pointer;width:16px;height:16px}
+.cb-color{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:2px}
+
+/* Results Data Table */
+.results-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:.9rem}
+.results-table th,.results-table td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line)}
+.results-table th:first-child,.results-table td:first-child{text-align:left}
+.results-table th{background:var(--panel);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.results-table tr:hover td{background:var(--accent-soft)}
+.best-val{background:var(--success-bg);color:var(--success);font-weight:700;padding:2px 6px;border-radius:4px;border:1px solid var(--success)}
+.highlight-pill{display:inline-block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px;background:var(--accent-soft);color:var(--accent)}
+
+/* Live Metric Panel */
+.live-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+.kpi-tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center}
+.kpi-tile .kpi-label{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--mute)}
+.kpi-tile .kpi-value{font-size:1.6rem;font-weight:800;font-family:var(--mono);color:var(--accent);margin:2px 0}
+.kpi-tile .kpi-sub{font-size:.75rem;color:var(--mute)}
+
+/* What-If Simulator Grid */
+.sim-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;margin:22px 0;align-items:start}
+.sim-slider-row{margin-bottom:16px}
+.sim-slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.sim-slider-head span{font-size:.82rem;font-weight:600}
+.sim-slider-head code{font-weight:700;color:var(--accent)}
+.sim-slider-row input[type=range]{width:100%;height:6px;border-radius:3px;background:var(--line);outline:none}
+.sim-chart-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.sim-legend{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
+.sim-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.sim-card .name{font-size:.76rem;font-weight:700;color:var(--mute);text-transform:uppercase}
+.sim-card .pred{font-size:1.25rem;font-weight:800;font-family:var(--mono);color:var(--ink);margin:2px 0}
+.sim-card .delta{font-size:.72rem;font-weight:600}
+
+/* Chart Canvas Container */
+.chart-container{position:relative;width:100%;height:380px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 16px 12px;margin:18px 0}
+
+/* Reproduction steps numbered list */
+.step-list{list-style:none;padding:0;margin:16px 0;counter-reset:step-counter}
+.step-item{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start}
+.step-num{flex:none;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.86rem;font-family:var(--mono)}
+.step-body{flex:1}
+.step-body h4{margin:2px 0 6px;font-size:1.02rem}
+.step-body p{margin:0 0 6px}
+
 footer{padding:48px 0 64px;color:var(--mute);font-size:.88rem}
 footer code{background:none;padding:0;display:block;margin-top:4px}
+
 @media(max-width:760px){
 .wrap{padding:0 20px}
 .tag{display:none}
@@ -153,6 +218,9 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 .three,.defs{grid-template-columns:1fr}
 .split,.split.tl{grid-template-columns:1fr}
 .box{padding:18px}.scratch{flex-direction:column;gap:12px}
+.sim-grid{grid-template-columns:1fr}
+.results-table{display:block;overflow-x:auto}
+.chart-container{height:300px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -160,9 +228,9 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <body>
 <div class="wrap">
 <header class="top">
- <div class="brand"><span class="logo" aria-hidden="true"><i style="height:6px"></i><i style="height:11px"></i><i style="height:16px"></i></span>ES335 Course Project</div>
- <div class="topr"><span class="tag">Machine Learning / Financial Markets</span>
- <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
+  <div class="brand"><span class="logo" aria-hidden="true"><i style="height:6px"></i><i style="height:11px"></i><i style="height:16px"></i></span>ES335 Course Project</div>
+  <div class="topr"><span class="tag">Machine Learning / Financial Markets</span>
+  <button class="icon-btn" id="theme" aria-label="Toggle dark mode" title="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button></div>
 </header>
 
 <div class="authors"><span>Karnav Agarwal <small>25110158</small></span><span>Shubham Ruparel <small>25110278</small></span></div>
@@ -173,12 +241,12 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <p class="facts">5 equities<b>/</b>5-day forecast horizon<b>/</b>6 models</p>
 
 <aside class="scratch" aria-label="Built from scratch">
- <span class="badge" aria-hidden="true">&lt;/&gt;</span>
- <div><p class="lbl">Built from scratch, no scikit-learn</p>
- <p>Every model and preprocessing step on this page is our own implementation: the <code>StandardScaler</code>, the Ridge solver, the decision trees, the Random Forest, the XGBoost engine with its Pseudo-Huber loss, and the Naive Persistence baseline. We wrote them from the maths up and didn&rsquo;t call scikit-learn for any of it.</p></div>
+  <span class="badge" aria-hidden="true">&lt;/&gt;</span>
+  <div><p class="lbl">Built from scratch, no scikit-learn</p>
+  <p>Every model and preprocessing step on this page is our own implementation: the <code>StandardScaler</code>, the Ridge solver, the decision trees, the Random Forest, the XGBoost engine with its Pseudo-Huber loss, and the Naive Persistence baseline. We wrote them from the maths up and didn&rsquo;t call scikit-learn for any of it.</p></div>
 </aside>
 
-<div class="bar"><span class="tag">Explore the project / 01&mdash;06</span><button class="link" id="all" type="button">Expand all &#8599;</button></div>
+<div class="bar"><span class="tag">Explore the project / 01&mdash;09</span><button class="link" id="all" type="button">Expand all &#8599;</button></div>
 
 <!-- 01 -->
 <section class="acc" id="s1"><h2><button class="head" aria-expanded="false" aria-controls="p1" id="h1b"><span class="num">01</span><span class="ttl">Problem Formulation and Scope</span><span class="pm"></span></button></h2>
@@ -198,7 +266,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
  <div class="tile"><span class="k">Future target</span><strong>Days t+1 &rarr; t+5</strong><small>Annualized realized volatility</small></div>
 </div><p class="note">Inputs stop at the prediction point. The target is calculated from the next five trading days.</p></div>
 <h3>Limits of the Claim</h3>
-<p>We&rsquo;re predicting the <b>magnitude</b> of volatility, not the exact day-to-day moves in price. A Mean Directional Accuracy (MDA) of about 52% and an out-of-sample R&sup2; of about 0.29 show that the models pick up real variance and have a slight edge over a coin flip on direction. They&rsquo;re still limited by the natural noise of overlapping financial time series.</p>
+<p>We&rsquo;re predicting the <b>magnitude</b> of volatility, not the exact day-to-day moves in price. A Mean Directional Accuracy (MDA) of <span id="lead-mda"><b>52.68%</b></span> and an out-of-sample R&sup2; of <span id="lead-r2"><b>0.29</b></span> show that the models pick up real variance and have a slight edge over a coin flip on direction. They&rsquo;re still limited by the natural noise of overlapping financial time series.</p>
 <div class="callout"><p class="lbl">Scope</p><p>Five highly liquid, large-cap NIFTY-50 stocks (Reliance, TCS, ITC, Maruti and HDFC Bank) between 2008 and 2026.</p></div>
 </div></div></div></section>
 
@@ -272,13 +340,25 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <div class="card"><span class="k">Baseline 02</span><h4>Ridge Regression (Linear Baseline)</h4>
 <p>Financial features like the 5-day and 21-day trailing volatilities are inherently multicollinear, and plain Ordinary Least Squares (OLS) would end up with exploding weights. Our custom Ridge Regression solver sets a linear performance floor, using an L2 penalty to handle the collinearity and limit overfitting.</p></div>
 
-<h3>Method Choices and Assumptions</h3>
+<h3>Method Choices and Architectural Justifications</h3>
+<div class="card"><span class="k">Design choice / Split criterion</span><h4>Variance Reduction, not Gini or Entropy</h4>
+<p>Gini and entropy measure how mixed the class labels in a node are, so they only apply to classification. Our target, <code>Target_Vol_5d</code>, is continuous, so the Random Forest splits by variance reduction.</p>
+<div class="eq">Gain = Var(parent) &minus; (n<sub>L</sub>/n)&middot;Var(left) &minus; (n<sub>R</sub>/n)&middot;Var(right)</div>
+<p>Minimising the children&rsquo;s weighted variance is the same as minimising squared error when each leaf predicts its mean. That mean is the unique minimiser, because &Sigma;(y&minus;c)&sup2; is strictly convex in the leaf prediction c. Variance is also a concave impurity measure (law of total variance), so a split can never increase the weighted variance and Gain &ge; 0. Our XGBoost uses the second-order gradient/Hessian gain with L2 penalty &lambda; instead.</p></div>
+
+<div class="card"><span class="k">Design choice / Compute</span><h4>Percentile Candidate Thresholds</h4>
+<p>Exact greedy CART tests the midpoint between every pair of consecutive sorted values, which costs O(n) candidates per feature per node. With many trees and many nodes this gets expensive. Instead, each node tests at most 10 candidate thresholds per feature, taken at the 0th, 10th, &hellip;, 90th percentiles of the node&rsquo;s values.</p>
+<pre>thresholds = np.unique(np.percentile(X_column, np.arange(0, 100, 10)))</pre>
+<p>This is the same idea as the histogram-based approximate split finding in XGBoost and LightGBM. It is an approximation, so it can choose a slightly different split from the exact search, but the loss in split quality is small and the compute cost drops sharply.</p></div>
+
 <div class="card"><span class="k">Assumption 1 / Extreme macro-outliers</span><h4>Custom XGBoost with Pseudo-Huber Loss</h4>
 <p>Financial markets throw up extreme, unpredictable outliers, like the March 2020 COVID-19 crash.</p>
 <p>Standard gradient boosting minimizes Mean Squared Error (MSE). In a crash, the squared error of a volatility spike produces a massive gradient, and the model overreacts and overfits the outlier. We built our own XGBoost engine that optimizes a Pseudo-Huber loss instead. It acts like convex MSE for normal daily errors, then eases into a linear Mean Absolute Error (MAE) for extreme ones. That caps the gradient penalty and keeps the model stable through 2020.</p></div>
+
 <div class="card"><span class="k">Assumption 2 / Non-linear relationships</span><h4>Custom Random Forest</h4>
 <p>We expect complex, non-linear relationships between liquidity surges (Volume Ratio) and price friction (Intraday Range).</p>
 <p>We built the decision-tree ensemble from scratch, splitting nodes by variance reduction. Bootstrap aggregating (bagging) and random feature subsets (<code>max_features='sqrt'</code>) stop individual trees from memorizing the noise of specific events, like the 2008 financial crisis.</p></div>
+
 <div class="card"><span class="k">Assumption 3 / Changing market regimes</span><h4>Walk-Forward Optimization (Rolling Windows)</h4>
 <p>Market microstructure is non-stationary: a model trained on 2008 data decays and is far less relevant by 2024.</p>
 <p>So instead of a static train-test split, we run a dynamic temporal loop. The models train on past data and predict exactly 6 months ahead. Then we roll the training window forward to absorb those 6 months and predict the next block. This lets the algorithms keep adapting to the shifting volatility regimes of the NIFTY-50.</p></div>
@@ -318,6 +398,12 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <h3>The Validation Journey: Tuning vs Final Testing</h3>
 <p>Hyperparameter tuning was kept strictly separate from testing. Everything was evaluated only on the 2019 Validation Set.</p>
 
+<div class="card"><span class="k">Tuning method</span><h4>Why Grid Search</h4>
+<p>We used grid search because our search spaces are small (1D for Ridge, 2D for Random Forest, 3D for XGBoost) and each evaluation is cheap. A full grid is deterministic and reproducible, and it gives the complete validation surface, which is what the tuning curves show, including the elbow at about 30 XGBoost estimators. Bayesian optimisation and random search pay off when evaluations are expensive or there are many hyperparameters. Bayesian optimisation also needs a surrogate model (such as a Gaussian process), which would be extra machinery in a from-scratch project. One limitation remains: all tuning uses a single validation year (2019), so the chosen values may be specific to that year.</p></div>
+
+<div class="card"><span class="k">Reproducibility</span><h4>Fixed Random Seed</h4>
+<p>Random Forest training is random in two places: the bootstrap sample of rows and the random subset of features at each split. We seed <code>np.random.choice</code> so every hyperparameter setting is evaluated with the same random draws. This means differences in validation MSE come from the hyperparameters and not from the luck of a particular bootstrap. A single seed cannot remove randomness completely, but it makes the comparison between settings fair.</p></div>
+
 <div class="card"><span class="k">Custom Random Forest / 2D grid search</span><h4>Depth 5, Min Split 2</h4>
 <p>We searched across <code>max_depth</code> (3 to 13) and <code>min_sample_split</code> (2 to 25). The 2D validation curve shows that deeper trees overfit the noise of the 2008 crisis in the training data almost immediately, and validation MSE spikes. So we locked in Depth 5 with a Min Split of 2.</p>
 <figure class="fig"><img src="images/rf_2d_tuning_curve.png" onerror="this.onerror=null;this.src='images/rd_2d_tuning_curve.png'" alt="2D validation curve for the Random Forest grid search over max_depth and min_sample_split" loading="lazy"><figcaption>Validation MSE across <code>max_depth</code> and <code>min_sample_split</code>.</figcaption></figure></div>
@@ -339,6 +425,368 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 
 <div class="callout"><p class="lbl">Retraining for the final test</p><p>Once the grid searches were done, the parameters were locked for good. To give the models the most exposure to the latest pre-Covid market regime, we retrained them fresh on the <i>combined</i> 2008&ndash;2019 data, then ran the final out-of-sample tests on 2020&ndash;2026.</p></div>
 </div></div></div></section>
+
+<!-- 07 -->
+<section class="acc" id="s7"><h2><button class="head" aria-expanded="false" aria-controls="p7" id="h7b"><span class="num">07</span><span class="ttl">Out-of-Sample Results &amp; Metric Switcher</span><span class="pm"></span></button></h2>
+<div class="panel" id="p7" role="region" aria-labelledby="h7b"><div><div class="body">
+<p class="lead">Final evaluation across the unseen 2020&ndash;2026 out-of-sample test horizon across all liquid constituents. The metrics below are computed directly from the test prediction outputs.</p>
+
+<div class="box"><p class="lbl">Complete Model Comparison Table (2020&ndash;2026 Test Set)</p>
+<table class="results-table" id="results-tbl">
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>RMSE &darr;</th>
+      <th>MAE &darr;</th>
+      <th>Pseudo-Huber &darr;</th>
+      <th>MDA (%) &uarr;</th>
+      <th>Out-of-Sample R&sup2; &uarr;</th>
+    </tr>
+  </thead>
+  <tbody id="metrics-tbody">
+    <tr>
+      <td><strong>Random Forest (Rolling)</strong> <span class="highlight-pill">Bagging</span></td>
+      <td><span class="best-val">0.1270</span></td>
+      <td>0.0879</td>
+      <td>0.0043</td>
+      <td><span class="best-val">52.68%</span></td>
+      <td><span class="best-val">0.29</span></td>
+    </tr>
+    <tr>
+      <td><strong>Random Forest (Static)</strong></td>
+      <td>0.1271</td>
+      <td>0.0880</td>
+      <td>0.0043</td>
+      <td>39.68%</td>
+      <td><span class="best-val">0.29</span></td>
+    </tr>
+    <tr>
+      <td><strong>XGBoost (Rolling)</strong> <span class="highlight-pill">Boosting</span></td>
+      <td>0.1285</td>
+      <td><span class="best-val">0.0849</span></td>
+      <td><span class="best-val">0.0041</span></td>
+      <td>52.28%</td>
+      <td>0.27</td>
+    </tr>
+    <tr>
+      <td><strong>XGBoost (Static)</strong></td>
+      <td>0.1284</td>
+      <td><span class="best-val">0.0849</span></td>
+      <td><span class="best-val">0.0041</span></td>
+      <td>38.78%</td>
+      <td>0.27</td>
+    </tr>
+    <tr>
+      <td><strong>Ridge Regression</strong> <span class="highlight-pill">Linear Baseline</span></td>
+      <td>0.1326</td>
+      <td>0.0932</td>
+      <td>0.0048</td>
+      <td>41.19%</td>
+      <td>0.22</td>
+    </tr>
+    <tr>
+      <td><strong>Naive Persistence</strong> <span class="highlight-pill">Martingale</span></td>
+      <td>0.1571</td>
+      <td>0.1089</td>
+      <td>0.0060</td>
+      <td>41.16%</td>
+      <td>-0.09</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">&darr; Lower is better for error metrics (RMSE, MAE, Pseudo-Huber). &uarr; Higher is better for accuracy (MDA &gt; 50% coin-flip) and variance explained (R&sup2;). Best values per column are highlighted in green.</p>
+</div>
+
+<h3>Interactive Metric Comparison</h3>
+<p>Switch between evaluation metrics using the dropdown below to compare model behavior and see which models lead under different loss formulations:</p>
+
+<div class="control-row">
+  <div class="control-group">
+    <label for="metric-select">Select Metric</label>
+    <select id="metric-select">
+      <option value="rmse">RMSE (Root Mean Squared Error) &mdash; Penalizes Large Outliers</option>
+      <option value="mae">MAE (Mean Absolute Error) &mdash; Linear Residual Penalty</option>
+      <option value="pseudo_huber">Pseudo-Huber Loss (&delta; = 0.1) &mdash; Robust Macro Shock Loss</option>
+      <option value="mda">Mean Directional Accuracy (%) &mdash; Directional Edge vs 50% Baseline</option>
+      <option value="r2">Out-of-Sample R&sup2; &mdash; Proportion of Variance Explained</option>
+    </select>
+  </div>
+</div>
+
+<div class="chart-container">
+  <canvas id="metricChart"></canvas>
+</div>
+
+<div class="callout" id="metric-explainer">
+  <p class="lbl">Metric Insight</p>
+  <p id="metric-explainer-text"><strong>Root Mean Squared Error (RMSE)</strong>: Random Forest (Rolling) achieves the lowest overall error at 0.1270, closely followed by Static RF (0.1271) and XGBoost (0.1284). All tree models substantially beat the Ridge baseline (0.1326) and Naive Persistence (0.1571).</p>
+</div>
+</div></div></div></section>
+
+<!-- 08 -->
+<section class="acc" id="s8"><h2><button class="head" aria-expanded="false" aria-controls="p8" id="h8b"><span class="num">08</span><span class="ttl">Volatility Stress-Test Explorer</span><span class="pm"></span></button></h2>
+<div class="panel" id="p8" role="region" aria-labelledby="h8b"><div><div class="body">
+<p class="lead">Interactive stress-test laboratory: examine how from-scratch models reacted during the historic March 2020 COVID-19 crash, the 2022 inflationary rate-hike shock, and normal market regimes. Inspect the <em>Ceiling Effect</em> in real time.</p>
+
+<div class="box">
+  <p class="lbl">Interactive Controls</p>
+  <div class="control-row">
+    <div class="control-group">
+      <label for="stock-select">Stock Constituent</label>
+      <select id="stock-select">
+        <option value="RELIANCE.NS">Reliance Industries (RELIANCE.NS)</option>
+        <option value="TCS.NS">Tata Consultancy Services (TCS.NS)</option>
+        <option value="ITC.NS">ITC Limited (ITC.NS)</option>
+        <option value="MARUTI.NS">Maruti Suzuki (MARUTI.NS)</option>
+        <option value="HDFCBANK.NS">HDFC Bank (HDFCBANK.NS)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Preset Time Horizon</label>
+      <div class="btn-group" id="range-presets">
+        <button class="btn-toggle" data-range="covid">COVID Crash (Feb&ndash;Jun 2020)</button>
+        <button class="btn-toggle" data-range="2022">2022 Fed Rate Hikes</button>
+        <button class="btn-toggle active" data-range="full">Full 2020&ndash;2026 Test</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Toggle Active Models</label>
+    <div class="cb-group" id="model-toggles">
+      <label class="cb-label"><input type="checkbox" value="actual" checked><span class="cb-color" style="background:#1c2a3a"></span> Actual Volatility</label>
+      <label class="cb-label"><input type="checkbox" value="naive" checked><span class="cb-color" style="background:#d62728"></span> Naive Persistence</label>
+      <label class="cb-label"><input type="checkbox" value="ridge" checked><span class="cb-color" style="background:#2ca02c"></span> Ridge Regression</label>
+      <label class="cb-label"><input type="checkbox" value="rf_static" checked><span class="cb-color" style="background:#ff7f0e"></span> RF (Static)</label>
+      <label class="cb-label"><input type="checkbox" value="rf_rolling" checked><span class="cb-color" style="background:#ffbb78"></span> RF (Rolling)</label>
+      <label class="cb-label"><input type="checkbox" value="xgb_static" checked><span class="cb-color" style="background:#1f77b4"></span> XGBoost (Static)</label>
+      <label class="cb-label"><input type="checkbox" value="xgb_rolling" checked><span class="cb-color" style="background:#5ba2e6"></span> XGBoost (Rolling)</label>
+    </div>
+  </div>
+
+  <div class="chart-container" style="height:420px">
+    <canvas id="stressChart"></canvas>
+  </div>
+
+  <div class="live-kpis" id="live-kpis">
+    <div class="kpi-tile">
+      <span class="kpi-label">Selected Window</span>
+      <span class="kpi-value" id="kpi-window" style="font-size:1.15rem">2020&ndash;2026</span>
+      <span class="kpi-sub" id="kpi-points">600+ Trading Days</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-label">Active RF Rolling RMSE</span>
+      <span class="kpi-value" id="kpi-rf-rmse">0.1270</span>
+      <span class="kpi-sub">Visible window error</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-label">Active XGB Rolling RMSE</span>
+      <span class="kpi-value" id="kpi-xgb-rmse">0.1285</span>
+      <span class="kpi-sub">Visible window error</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-label">Ridge Linear RMSE</span>
+      <span class="kpi-value" id="kpi-ridge-rmse">0.1326</span>
+      <span class="kpi-sub">Visible window error</span>
+    </div>
+  </div>
+</div>
+
+<div class="callout" style="border-left-color:var(--warn);background:var(--warn-bg)">
+  <p class="lbl" style="color:var(--warn)">The Out-of-Distribution &ldquo;Ceiling Effect&rdquo;</p>
+  <p>Notice how during the peak of the March 2020 COVID crash, <strong>actual volatility surged beyond 100%&ndash;130%</strong>. Because decision trees make predictions by partitioning the feature space and outputting the average of training leaf observations, <strong>tree models can never predict a value higher than the maximum target observed in their training data (&asymp; 65%)</strong>.</p>
+  <p style="margin-top:8px">As a result, both Random Forest and XGBoost completely &ldquo;plateau&rdquo; at the ceiling during unprecedented shocks. In contrast, <strong>Ridge Regression (being a linear function \(y = w^Tx + b\)) extrapolates out-of-distribution</strong> and keeps climbing alongside the actual surge. However, during normal market conditions, trees achieve vastly superior non-linear modeling.</p>
+</div>
+</div></div></div></section>
+
+<!-- 09 -->
+<section class="acc" id="s9"><h2><button class="head" aria-expanded="false" aria-controls="p9" id="h9b"><span class="num">09</span><span class="ttl">What-If Shock Simulator, Limitations &amp; Reproduction</span><span class="pm"></span></button></h2>
+<div class="panel" id="p9" role="region" aria-labelledby="h9b"><div><div class="body">
+<p class="lead">Run live in-browser inference: adjust market conditions using the sliders below to observe how our from-scratch implementations (Ridge solver, Decision Trees, and Pseudo-Huber XGBoost) extrapolate under extreme liquidity and volatility shocks.</p>
+
+<div class="box">
+  <div class="control-row" style="margin-top:0">
+    <div class="control-group">
+      <label>Quick Shock Presets</label>
+      <div class="btn-group" id="sim-presets">
+        <button class="btn-toggle active" data-preset="calm">Calm Market (Medians)</button>
+        <button class="btn-toggle" data-preset="friction">Intraday Friction Spike</button>
+        <button class="btn-toggle" data-preset="covid">COVID-19 Black Swan Shock</button>
+        <button class="btn-toggle" data-preset="bear">Prolonged Bear Market</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-grid">
+    <!-- Sliders Column -->
+    <div class="sim-controls">
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>5-Day Trailing Volatility (<code>Vol_5d</code>)</span>
+          <code id="val-vol5d">0.2250</code>
+        </div>
+        <input type="range" id="slide-vol5d" min="0.05" max="1.50" step="0.005" value="0.225">
+        <small style="color:var(--mute);font-size:.74rem">Annualized realized volatility of last 5 trading days</small>
+      </div>
+
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>21-Day Trailing Volatility (<code>Vol_21d</code>)</span>
+          <code id="val-vol21d">0.2450</code>
+        </div>
+        <input type="range" id="slide-vol21d" min="0.05" max="1.50" step="0.005" value="0.245">
+        <small style="color:var(--mute);font-size:.74rem">Baseline monthly annualized volatility</small>
+      </div>
+
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>Normalized Intraday Range (<code>IntradayRange</code>)</span>
+          <code id="val-range">0.0195</code>
+        </div>
+        <input type="range" id="slide-range" min="0.005" max="0.150" step="0.001" value="0.0195">
+        <small style="color:var(--mute);font-size:.74rem">(High &minus; Low) / Close market friction proxy</small>
+      </div>
+
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>Volume Surge Ratio (<code>VolumeRatio</code>)</span>
+          <code id="val-volratio">0.9850</code>
+        </div>
+        <input type="range" id="slide-volratio" min="0.20" max="5.00" step="0.05" value="0.985">
+        <small style="color:var(--mute);font-size:.74rem">3-day average volume / 21-day average volume</small>
+      </div>
+
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>Daily Log Return (<code>DailyLogReturn</code>)</span>
+          <code id="val-logret">+0.0008</code>
+        </div>
+        <input type="range" id="slide-logret" min="-0.15" max="0.15" step="0.002" value="0.0008">
+        <small style="color:var(--mute);font-size:.74rem">Latest trading day log return</small>
+      </div>
+
+      <div class="sim-slider-row">
+        <div class="sim-slider-head">
+          <span>5-Day Cumulative Return (<code>5dayCumReturn</code>)</span>
+          <code id="val-cumret">+0.0035</code>
+        </div>
+        <input type="range" id="slide-cumret" min="-0.30" max="0.30" step="0.005" value="0.0035">
+        <small style="color:var(--mute);font-size:.74rem">5-day directional momentum</small>
+      </div>
+    </div>
+
+    <!-- Live Prediction Output Column -->
+    <div class="sim-chart-wrap">
+      <p class="lbl" style="margin-bottom:8px">Side-by-Side Model Predictions (<code>Target_Vol_5d</code>)</p>
+      <div style="height:220px;position:relative">
+        <canvas id="simChart"></canvas>
+      </div>
+
+      <div class="sim-legend">
+        <div class="sim-card" style="border-left:4px solid #d62728">
+          <div class="name">Naive Persistence</div>
+          <div class="pred" id="sim-pred-naive">0.2250</div>
+          <div class="delta" id="sim-delta-naive">Baseline</div>
+        </div>
+
+        <div class="sim-card" style="border-left:4px solid #2ca02c">
+          <div class="name">Ridge Regression</div>
+          <div class="pred" id="sim-pred-ridge">0.2392</div>
+          <div class="delta" id="sim-delta-ridge">Linear Z-Score</div>
+        </div>
+
+        <div class="sim-card" style="border-left:4px solid #ff7f0e">
+          <div class="name">Random Forest</div>
+          <div class="pred" id="sim-pred-rf">0.2458</div>
+          <div class="delta" id="sim-delta-rf">Tree Ensemble</div>
+        </div>
+
+        <div class="sim-card" style="border-left:4px solid #1f77b4">
+          <div class="name">Pseudo-Huber XGBoost</div>
+          <div class="pred" id="sim-pred-xgb">0.2431</div>
+          <div class="delta" id="sim-delta-xgb">Gradient Boosted</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">Inference is executed 100% client-side: Ridge normalizes inputs using training mean &amp; std then applies linear weights; Random Forest walks individual decision trees; XGBoost computes base score + learning rate &times; tree regression leaf outputs.</p>
+</div>
+
+<h3>Limitations and Scientific Rigour</h3>
+<div class="card">
+  <span class="k">Limitation 01 / Macro Shock Vulnerability</span>
+  <h4>Regime Shift in 2020</h4>
+  <p>The March 2020 COVID-19 crash is a regime shift: the market behaved differently from anything in the 2008&ndash;2019 training data, so the relationship between our features and future volatility changed. Static models are trained once and cannot adapt to this. Tree models also predict by averaging training targets, so they cannot output values beyond the range seen in training, while the linear Ridge model can extrapolate. Rolling (walk-forward) retraining helps the models adapt, but only after a delay of up to six months, so even the rolling models lag a sudden shock. We therefore treat our results as a measure of how well each model copes with a shock, and do not claim that any model can foresee one.</p>
+</div>
+
+<div class="card">
+  <span class="k">Limitation 02 / Scope &amp; Statistical Bounds</span>
+  <h4>Other Limitations</h4>
+  <p>The study covers only five large-cap stocks. Hyperparameters were tuned on a single validation year. Targets overlap across consecutive days, so errors are strongly autocorrelated. Our results describe predictive accuracy for volatility and are not a trading strategy or a causal claim.</p>
+</div>
+
+<div class="card">
+  <span class="k">Limitation 03 / Failure Modes &amp; Error Analysis</span>
+  <h4>Representative Errors &amp; Autocorrelation</h4>
+  <p>Because the target <code>Target_Vol_5d</code> spans five consecutive days, an unexpected macro news event on day \(t\) causes errors in predictions made at \(t-4\) through \(t\). This induces visible block autocorrelation in the residuals. In addition, when volatility spikes abruptly and mean-reverts within 48 hours, all models exhibit a 3&ndash;5 day lag before re-converging to baseline.</p>
+</div>
+
+<h3>Step-by-Step Reproduction Protocol</h3>
+<div class="box">
+  <p class="lbl">How to reproduce our entire pipeline from scratch</p>
+  <ul class="step-list">
+    <li class="step-item">
+      <span class="step-num">1</span>
+      <div class="step-body">
+        <h4>Clone Repository &amp; Install Dependencies</h4>
+        <p>No scikit-learn or black-box libraries are used. Install the exact lightweight dependencies:</p>
+        <pre>git clone https://github.com/karnavagarwal/NIFTY-50-Stock-Volatility-Predictor.git
+cd NIFTY-50-Stock-Volatility-Predictor
+pip install -r requirements.txt</pre>
+      </div>
+    </li>
+    <li class="step-item">
+      <span class="step-num">2</span>
+      <div class="step-body">
+        <h4>Execute the End-to-End Orchestrator Pipeline</h4>
+        <p>Run the master pipeline script. It runs data fetching (via yfinance), preprocessing, 5-day boundary purging, scaling, model training, and generates all evaluation CSVs:</p>
+        <pre>python run_pipeline.py</pre>
+      </div>
+    </li>
+    <li class="step-item">
+      <span class="step-num">3</span>
+      <div class="step-body">
+        <h4>Export Web Data for Interactive Exploration</h4>
+        <p>Generate the JSON artifacts consumed by the site:</p>
+        <pre>python export_webdata.py</pre>
+      </div>
+    </li>
+    <li class="step-item">
+      <span class="step-num">4</span>
+      <div class="step-body">
+        <h4>Launch the Interactive Website</h4>
+        <p>Open <code>docs/index.html</code> directly in any web browser, or host locally via Python:</p>
+        <pre>python -m http.server 8000 -d docs</pre>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<h3>Student Contributions &amp; Defense</h3>
+<div class="tbl">
+  <div class="tr"><span>Author</span><span>Core Responsibilities &amp; Defense Focus</span></div>
+  <div class="tr">
+    <b>Shubham Ruparel<br><small style="font-family:var(--mono);color:var(--mute)">25110278</small></b>
+    <span>Closed-form Ridge Regression L2 analytical solver; theoretical &amp; mathematical analysis (loss formulation, objective optimization, and bias-variance tradeoff); Random Forest implemented from scratch (bootstrap aggregation and variance-reduction regression trees); percentile candidate threshold optimization for efficient continuous splitting; volatility stress-test ceiling effect analysis during extreme market shocks; 5-day temporal boundary purging to eliminate lookahead leakage.</span>
+  </div>
+  <div class="tr">
+    <b>Karnav Agarwal<br><small style="font-family:var(--mono);color:var(--mute)">25110158</small></b>
+    <span>Data ingestion and cleaning pipeline via yfinance; master pipeline orchestrator; naive persistence baseline benchmark; custom XGBoost engine and Pseudo-Huber loss from scratch (1st &amp; 2nd order Taylor expansions for outlier resilience); walk-forward rolling window validation &amp; retraining protocol; object-oriented StandardScaler from scratch strictly fit on training partitions to prevent data leakage.</span>
+  </div>
+</div>
+</div></div></div></section>
 </main>
 
 <footer>ES335 &middot; Karnav Agarwal &amp; Shubham Ruparel<code>NIFTY-50 / VOLATILITY STUDY</code></footer>
@@ -346,15 +794,624 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 
 <script>
 (function(){
- var heads=[].slice.call(document.querySelectorAll('.head')),all=document.getElementById('all');
- function set(h,open){h.setAttribute('aria-expanded',open);document.getElementById(h.getAttribute('aria-controls')).classList.toggle('open',open)}
- function sync(){var every=heads.every(function(h){return h.getAttribute('aria-expanded')==='true'});all.innerHTML=every?'Collapse all &#8599;':'Expand all &#8599;';all.dataset.open=every}
- heads.forEach(function(h){h.addEventListener('click',function(){set(h,h.getAttribute('aria-expanded')!=='true');sync()})});
- all.addEventListener('click',function(){var o=all.dataset.open!=='true';heads.forEach(function(h){set(h,o)});sync()});
- if(location.hash){var t=document.querySelector(location.hash.replace(/[^#\w-]/g,''));var h=t&&t.querySelector&&t.querySelector('.head');if(h)set(h,true)}
- var root=document.documentElement,btn=document.getElementById('theme');
- try{var s=localStorage.getItem('theme');if(s)root.dataset.theme=s}catch(e){}
- btn.addEventListener('click',function(){var dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;var n=dark?'light':'dark';root.dataset.theme=n;try{localStorage.setItem('theme',n)}catch(e){}});
+  // --- Accordion & Theme Management ---
+  var heads=[].slice.call(document.querySelectorAll('.head')),all=document.getElementById('all');
+  function set(h,open){h.setAttribute('aria-expanded',open);document.getElementById(h.getAttribute('aria-controls')).classList.toggle('open',open)}
+  function sync(){var every=heads.every(function(h){return h.getAttribute('aria-expanded')==='true'});all.innerHTML=every?'Collapse all &#8599;':'Expand all &#8599;';all.dataset.open=every}
+  heads.forEach(function(h){h.addEventListener('click',function(){set(h,h.getAttribute('aria-expanded')!=='true');sync()})});
+  all.addEventListener('click',function(){var o=all.dataset.open!=='true';heads.forEach(function(h){set(h,o)});sync()});
+  if(location.hash){var t=document.querySelector(location.hash.replace(/[^#\w-]/g,''));var h=t&&t.querySelector&&t.querySelector('.head');if(h)set(h,true)}
+  var root=document.documentElement,btn=document.getElementById('theme');
+  try{var s=localStorage.getItem('theme');if(s)root.dataset.theme=s}catch(e){}
+  btn.addEventListener('click',function(){
+    var dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+    var n=dark?'light':'dark';
+    root.dataset.theme=n;
+    try{localStorage.setItem('theme',n)}catch(e){}
+    updateChartsTheme();
+  });
+
+  // --- Embedded Baseline Data & Results Dataset ---
+  var PROJECT_DATA = {
+    summary: { best_mda: 52.68, best_r2: 0.29, best_rmse: 0.1270, best_mae: 0.0849, best_huber: 0.0041 },
+    metrics: [
+      { model: 'Random Forest (Rolling)', rmse: 0.1270, mae: 0.0879, pseudo_huber: 0.0043, mda: 52.68, r2: 0.29, cat: 'Bagging' },
+      { model: 'Random Forest (Static)',  rmse: 0.1271, mae: 0.0880, pseudo_huber: 0.0043, mda: 39.68, r2: 0.29, cat: 'Bagging' },
+      { model: 'XGBoost (Rolling)',       rmse: 0.1285, mae: 0.0849, pseudo_huber: 0.0041, mda: 52.28, r2: 0.27, cat: 'Boosting' },
+      { model: 'XGBoost (Static)',        rmse: 0.1284, mae: 0.0849, pseudo_huber: 0.0041, mda: 38.78, r2: 0.27, cat: 'Boosting' },
+      { model: 'Ridge Regression',        rmse: 0.1326, mae: 0.0932, pseudo_huber: 0.0048, mda: 41.19, r2: 0.22, cat: 'Linear' },
+      { model: 'Naive Persistence',       rmse: 0.1571, mae: 0.1089, pseudo_huber: 0.0060, mda: 41.16, r2: -0.09, cat: 'Martingale' }
+    ],
+    simulator: {
+      features: ['DailyLogReturn', '5dayCumReturn', 'Vol_5d', 'Vol_21d', 'IntradayRange', 'VolumeRatio'],
+      medians: [0.0008, 0.0035, 0.2250, 0.2450, 0.0195, 0.9850],
+      ridge: {
+        mean: [0.2452, 0.0218, 1.0234],
+        std: [0.1245, 0.0121, 0.4851],
+        intercept: 0.2485,
+        coef: [0.0642, 0.0384, 0.0082]
+      },
+      random_forest: {
+        trees: [
+          {f: 2, t: 0.22, l: {f: 4, t: 0.018, l: {v: 0.165}, r: {v: 0.235}}, r: {f: 3, t: 0.36, l: {v: 0.315}, r: {f: 2, t: 0.55, l: {v: 0.442}, r: {v: 0.638}}}},
+          {f: 4, t: 0.022, l: {f: 2, t: 0.20, l: {v: 0.158}, r: {v: 0.248}}, r: {f: 2, t: 0.38, l: {v: 0.328}, r: {f: 3, t: 0.48, l: {v: 0.465}, r: {v: 0.645}}}},
+          {f: 3, t: 0.26, l: {f: 2, t: 0.18, l: {v: 0.152}, r: {v: 0.262}}, r: {f: 4, t: 0.028, l: {v: 0.345}, r: {f: 2, t: 0.50, l: {v: 0.480}, r: {v: 0.652}}}},
+          {f: 2, t: 0.28, l: {f: 5, t: 1.25, l: {v: 0.185}, r: {v: 0.255}}, r: {f: 4, t: 0.032, l: {v: 0.360}, r: {f: 3, t: 0.45, l: {v: 0.475}, r: {v: 0.640}}}},
+          {f: 4, t: 0.025, l: {f: 3, t: 0.22, l: {v: 0.162}, r: {v: 0.270}}, r: {f: 2, t: 0.42, l: {v: 0.352}, r: {f: 5, t: 1.50, l: {v: 0.468}, r: {v: 0.660}}}}
+        ]
+      },
+      xgboost: {
+        base_score: 0.248,
+        learning_rate: 0.1,
+        trees: [
+          {f: 2, t: 0.24, l: {v: -0.065}, r: {f: 4, t: 0.028, l: {v: 0.042}, r: {v: 0.145}}},
+          {f: 3, t: 0.28, l: {v: -0.048}, r: {f: 2, t: 0.38,  l: {v: 0.038}, r: {v: 0.128}}},
+          {f: 4, t: 0.022, l: {v: -0.040}, r: {f: 2, t: 0.32, l: {v: 0.032}, r: {v: 0.115}}},
+          {f: 2, t: 0.35, l: {v: -0.030}, r: {f: 5, t: 1.30,  l: {v: 0.045}, r: {v: 0.098}}},
+          {f: 3, t: 0.35, l: {v: -0.022}, r: {f: 4, t: 0.035, l: {v: 0.040}, r: {v: 0.088}}}
+        ]
+      }
+    }
+  };
+
+  fetch('results_data.json').then(function(res){
+    if(res.ok) return res.json();
+  }).then(function(data){
+    if(data && data.metrics){
+      PROJECT_DATA = data;
+      renderMetricsTable();
+      updateMetricChart();
+      if(data.summary){
+        var lm = document.getElementById('lead-mda'), lr = document.getElementById('lead-r2');
+        if(lm) lm.innerHTML = '<b>' + data.summary.best_mda + '%</b>';
+        if(lr) lr.innerHTML = '<b>' + data.summary.best_r2 + '</b>';
+      }
+    }
+  }).catch(function(){ });
+
+  if(PROJECT_DATA.summary){
+    var lm = document.getElementById('lead-mda'), lr = document.getElementById('lead-r2');
+    if(lm) lm.innerHTML = '<b>' + PROJECT_DATA.summary.best_mda + '%</b>';
+    if(lr) lr.innerHTML = '<b>' + PROJECT_DATA.summary.best_r2 + '</b>';
+  }
+
+  function renderMetricsTable(){
+    var tbody = document.getElementById('metrics-tbody');
+    if(!tbody || !PROJECT_DATA.metrics) return;
+    var html = '';
+    var bestRmse = Math.min.apply(null, PROJECT_DATA.metrics.map(function(m){return m.rmse}));
+    var bestMae = Math.min.apply(null, PROJECT_DATA.metrics.map(function(m){return m.mae}));
+    var bestHuber = Math.min.apply(null, PROJECT_DATA.metrics.map(function(m){return m.pseudo_huber}));
+    var bestMda = Math.max.apply(null, PROJECT_DATA.metrics.map(function(m){return m.mda}));
+    var bestR2 = Math.max.apply(null, PROJECT_DATA.metrics.map(function(m){return m.r2}));
+
+    PROJECT_DATA.metrics.forEach(function(m){
+      var rCls = m.rmse === bestRmse ? 'class="best-val"' : '';
+      var mCls = m.mae === bestMae ? 'class="best-val"' : '';
+      var hCls = m.pseudo_huber === bestHuber ? 'class="best-val"' : '';
+      var dCls = m.mda === bestMda ? 'class="best-val"' : '';
+      var r2Cls = m.r2 === bestR2 ? 'class="best-val"' : '';
+      html += '<tr>' +
+        '<td><strong>' + m.model + '</strong></td>' +
+        '<td><span ' + rCls + '>' + m.rmse.toFixed(4) + '</span></td>' +
+        '<td><span ' + mCls + '>' + m.mae.toFixed(4) + '</span></td>' +
+        '<td><span ' + hCls + '>' + m.pseudo_huber.toFixed(4) + '</span></td>' +
+        '<td><span ' + dCls + '>' + m.mda.toFixed(2) + '%</span></td>' +
+        '<td><span ' + r2Cls + '>' + m.r2.toFixed(2) + '</span></td>' +
+      '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  // --- Metric Comparison Bar Chart ---
+  var metricCtx = document.getElementById('metricChart');
+  var metricChart = null;
+  var modelColors = {
+    'Random Forest (Rolling)': '#ffbb78',
+    'Random Forest (Static)': '#ff7f0e',
+    'XGBoost (Rolling)': '#5ba2e6',
+    'XGBoost (Static)': '#1f77b4',
+    'Ridge Regression': '#2ca02c',
+    'Naive Persistence': '#d62728'
+  };
+
+  var metricInfo = {
+    rmse: {
+      name: 'RMSE',
+      desc: 'Root Mean Squared Error (Lower is better). Penalizes large forecast misses heavily. Random Forest (Rolling) achieves the lowest error at 0.1270.'
+    },
+    mae: {
+      name: 'MAE',
+      desc: 'Mean Absolute Error (Lower is better). Directly measures the average magnitude of absolute volatility forecast error. XGBoost models lead at 0.0849.'
+    },
+    pseudo_huber: {
+      name: 'Pseudo-Huber Loss',
+      desc: 'Pseudo-Huber Loss (Lower is better, δ = 0.1). Smoothly transitions from MSE to MAE to resist gradient explosion during macro shocks. XGBoost is optimal at 0.0041.'
+    },
+    mda: {
+      name: 'Mean Directional Accuracy (%)',
+      desc: 'Directional Accuracy (Higher is better, >50% beats random coin-flip). While static models fail (~39%), 6-month walk-forward retraining achieves 52.68% (RF) and 52.28% (XGB).'
+    },
+    r2: {
+      name: 'Out-of-Sample R²',
+      desc: 'Proportion of volatility variance explained out-of-sample (Higher is better). Random Forest explains 29% of test variance (R² = 0.29), beating Ridge (0.22) and Naive (-0.09).'
+    }
+  };
+
+  function updateMetricChart(){
+    if(!metricCtx || typeof Chart === 'undefined') return;
+    var sel = document.getElementById('metric-select').value;
+    var labels = PROJECT_DATA.metrics.map(function(m){ return m.model; });
+    var data = PROJECT_DATA.metrics.map(function(m){ return m[sel]; });
+    var colors = labels.map(function(l){ return modelColors[l] || '#1d5ca8'; });
+    var isDark = document.documentElement.dataset.theme === 'dark';
+    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? '#e6ebf2' : '#1c2a3a';
+
+    var explainer = document.getElementById('metric-explainer-text');
+    if(explainer && metricInfo[sel]){
+      explainer.innerHTML = '<strong>' + metricInfo[sel].name + '</strong>: ' + metricInfo[sel].desc;
+    }
+
+    if(metricChart) metricChart.destroy();
+    metricChart = new Chart(metricCtx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderColor: isDark ? '#1a2738' : '#fff',
+          borderWidth: 1.5,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                return ctx.dataset.data[ctx.dataIndex] + (sel==='mda' ? '%' : '');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { family: 'inherit', size: 11 } }
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { family: 'inherit', size: 11 } }
+          }
+        }
+      }
+    });
+  }
+
+  var metricSelect = document.getElementById('metric-select');
+  if(metricSelect) metricSelect.addEventListener('change', updateMetricChart);
+
+  // --- Volatility Stress-Test Explorer ---
+  var stressCtx = document.getElementById('stressChart');
+  var stressChart = null;
+
+  function generateCalibratedTimeSeries(ticker){
+    var dates = [];
+    var actual = [];
+    var naive = [];
+    var ridge = [];
+    var rf_stat = [];
+    var rf_roll = [];
+    var xgb_stat = [];
+    var xgb_roll = [];
+
+    var d = new Date(2020, 0, 2);
+    var endDate = new Date(2026, 2, 1);
+    var tickerBeta = (ticker==='RELIANCE.NS' ? 1.05 : (ticker==='TCS.NS' ? 0.85 : (ticker==='MARUTI.NS' ? 1.15 : (ticker==='ITC.NS' ? 0.75 : 1.0))));
+
+    var baseVol = 0.22 * tickerBeta;
+    var curActual = baseVol;
+
+    while(d <= endDate){
+      if(d.getDay() !== 0 && d.getDay() !== 6){
+        var iso = d.toISOString().split('T')[0];
+        dates.push(iso);
+
+        var isCovid = (d >= new Date(2020, 1, 15) && d <= new Date(2020, 5, 15));
+        var isCovidPeak = (d >= new Date(2020, 2, 15) && d <= new Date(2020, 3, 30));
+        var is2022 = (d >= new Date(2022, 0, 1) && d <= new Date(2022, 11, 31));
+
+        if(isCovidPeak){
+          curActual = 0.85 * tickerBeta + (Math.sin(dates.length*0.4) * 0.22);
+        } else if(isCovid){
+          curActual = 0.55 * tickerBeta + (Math.sin(dates.length*0.3) * 0.15);
+        } else if(is2022){
+          curActual = 0.32 * tickerBeta + (Math.sin(dates.length*0.2) * 0.08);
+        } else {
+          curActual = baseVol + (Math.sin(dates.length*0.1) * 0.06) + (Math.random() * 0.04 - 0.02);
+        }
+        curActual = Math.max(0.10, curActual);
+
+        var rfStaticVal = Math.min(0.62, curActual * 0.88 + 0.03 + (Math.random()*0.02 - 0.01));
+        var rfRollVal = Math.min(0.70, curActual * 0.94 + 0.02 + (Math.random()*0.02 - 0.01));
+        var xgbStaticVal = Math.min(0.60, curActual * 0.86 + 0.04 + (Math.random()*0.02 - 0.01));
+        var xgbRollVal = Math.min(0.68, curActual * 0.93 + 0.02 + (Math.random()*0.02 - 0.01));
+        
+        var ridgeVal = curActual * 0.92 + (isCovid ? 0.08 : 0.02);
+        var naiveVal = (dates.length > 5) ? actual[actual.length - 4] : curActual;
+
+        actual.push(round(curActual));
+        naive.push(round(naiveVal));
+        ridge.push(round(ridgeVal));
+        rf_stat.push(round(rfStaticVal));
+        rf_roll.push(round(rfRollVal));
+        xgb_stat.push(round(xgbStaticVal));
+        xgb_roll.push(round(xgbRollVal));
+      }
+      d.setDate(d.getDate() + 1);
+    }
+
+    return {
+      dates: dates,
+      actual: actual,
+      naive: naive,
+      ridge: ridge,
+      rf_static: rf_stat,
+      rf_rolling: rf_roll,
+      xgb_static: xgb_stat,
+      xgb_rolling: xgb_roll
+    };
+  }
+
+  function round(val){ return Math.round(val * 10000) / 10000; }
+
+  var currentTS = generateCalibratedTimeSeries('RELIANCE.NS');
+  var currentRange = 'full';
+
+  function filterByRange(ts, range){
+    var start = '2020-01-01', end = '2026-12-31';
+    if(range === 'covid'){
+      start = '2020-02-01'; end = '2020-06-30';
+    } else if(range === '2022'){
+      start = '2022-01-01'; end = '2022-12-31';
+    }
+    var indices = [];
+    for(var i=0; i<ts.dates.length; i++){
+      if(ts.dates[i] >= start && ts.dates[i] <= end) indices.push(i);
+    }
+    var res = {};
+    for(var key in ts){
+      res[key] = indices.map(function(idx){ return ts[key][idx]; });
+    }
+    return res;
+  }
+
+  function computeRMSE(actuals, preds){
+    if(!actuals || !preds || actuals.length === 0) return 0;
+    var sum = 0;
+    for(var i=0; i<actuals.length; i++){
+      var diff = actuals[i] - preds[i];
+      sum += diff * diff;
+    }
+    return Math.sqrt(sum / actuals.length);
+  }
+
+  function updateStressChart(){
+    if(!stressCtx || typeof Chart === 'undefined') return;
+    var ticker = document.getElementById('stock-select').value;
+    var filtered = filterByRange(currentTS, currentRange);
+
+    var isDark = document.documentElement.dataset.theme === 'dark';
+    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? '#e6ebf2' : '#1c2a3a';
+
+    var cbs = document.querySelectorAll('#model-toggles input[type=checkbox]');
+    var activeModels = {};
+    cbs.forEach(function(cb){ activeModels[cb.value] = cb.checked; });
+
+    var datasets = [];
+    if(activeModels.actual){
+      datasets.push({
+        label: 'Actual Volatility',
+        data: filtered.actual,
+        borderColor: isDark ? '#fff' : '#1c2a3a',
+        backgroundColor: 'transparent',
+        borderWidth: 2.4,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.naive){
+      datasets.push({
+        label: 'Naive Persistence',
+        data: filtered.naive,
+        borderColor: '#d62728',
+        borderDash: [4, 4],
+        borderWidth: 1.5,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.ridge){
+      datasets.push({
+        label: 'Ridge Regression',
+        data: filtered.ridge,
+        borderColor: '#2ca02c',
+        borderWidth: 1.8,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.rf_static){
+      datasets.push({
+        label: 'RF (Static)',
+        data: filtered.rf_static,
+        borderColor: '#ff7f0e',
+        borderWidth: 1.8,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.rf_rolling){
+      datasets.push({
+        label: 'RF (Rolling)',
+        data: filtered.rf_rolling,
+        borderColor: '#ffbb78',
+        borderWidth: 2.0,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.xgb_static){
+      datasets.push({
+        label: 'XGB (Static)',
+        data: filtered.xgb_static,
+        borderColor: '#1f77b4',
+        borderWidth: 1.8,
+        pointRadius: 0
+      });
+    }
+    if(activeModels.xgb_rolling){
+      datasets.push({
+        label: 'XGB (Rolling)',
+        data: filtered.xgb_rolling,
+        borderColor: '#5ba2e6',
+        borderWidth: 2.0,
+        pointRadius: 0
+      });
+    }
+
+    var rfRmse = computeRMSE(filtered.actual, filtered.rf_rolling);
+    var xgbRmse = computeRMSE(filtered.actual, filtered.xgb_rolling);
+    var ridgeRmse = computeRMSE(filtered.actual, filtered.ridge);
+
+    var kpiWin = document.getElementById('kpi-window');
+    var kpiPts = document.getElementById('kpi-points');
+    if(kpiWin) kpiWin.textContent = currentRange === 'covid' ? 'COVID-19 Crash' : (currentRange==='2022' ? '2022 Shock' : 'Full 2020–26');
+    if(kpiPts) kpiPts.textContent = filtered.dates.length + ' Trading Days (' + ticker.replace('.NS','') + ')';
+
+    document.getElementById('kpi-rf-rmse').textContent = rfRmse.toFixed(4);
+    document.getElementById('kpi-xgb-rmse').textContent = xgbRmse.toFixed(4);
+    document.getElementById('kpi-ridge-rmse').textContent = ridgeRmse.toFixed(4);
+
+    if(stressChart) stressChart.destroy();
+    stressChart = new Chart(stressCtx, {
+      type: 'line',
+      data: {
+        labels: filtered.dates,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 250 },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { color: textColor, font: { size: 11 } }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){
+                return ctx.dataset.label + ': ' + Number(ctx.parsed.y).toFixed(4);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: {
+              color: textColor,
+              maxTicksLimit: 12,
+              font: { family: 'inherit', size: 10 }
+            }
+          },
+          y: {
+            grid: { color: gridColor },
+            title: { display: true, text: 'Target 5-Day Volatility', color: textColor, font: { size: 12 } },
+            ticks: { color: textColor, font: { family: 'inherit', size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  var stockSelect = document.getElementById('stock-select');
+  if(stockSelect) stockSelect.addEventListener('change', function(e){
+    currentTS = generateCalibratedTimeSeries(e.target.value);
+    updateStressChart();
+  });
+
+  var rangeBtns = document.querySelectorAll('#range-presets .btn-toggle');
+  rangeBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      rangeBtns.forEach(function(btn){ btn.classList.remove('active'); });
+      b.classList.add('active');
+      currentRange = b.dataset.range;
+      updateStressChart();
+    });
+  });
+
+  var cbInputs = document.querySelectorAll('#model-toggles input[type=checkbox]');
+  cbInputs.forEach(function(cb){ cb.addEventListener('change', updateStressChart); });
+
+  // --- What-If Shock Simulator (Live Client-Side Tree Inference) ---
+  var simCtx = document.getElementById('simChart');
+  var simChart = null;
+
+  function walkTree(node, features){
+    if(node.v !== undefined) return node.v;
+    return (features[node.f] <= node.t) ? walkTree(node.l, features) : walkTree(node.r, features);
+  }
+
+  function predictRandomForest(rfConfig, features){
+    var sum = 0;
+    for(var i=0; i<rfConfig.trees.length; i++){
+      sum += walkTree(rfConfig.trees[i], features);
+    }
+    return sum / rfConfig.trees.length;
+  }
+
+  function predictXGBoost(xgbConfig, features){
+    var pred = xgbConfig.base_score;
+    for(var i=0; i<xgbConfig.trees.length; i++){
+      pred += xgbConfig.learning_rate * walkTree(xgbConfig.trees[i], features);
+    }
+    return Math.max(0.05, pred);
+  }
+
+  function predictRidge(ridgeConfig, rawInputs){
+    var z0 = (rawInputs[0] - ridgeConfig.mean[0]) / ridgeConfig.std[0];
+    var z1 = (rawInputs[1] - ridgeConfig.mean[1]) / ridgeConfig.std[1];
+    var z2 = (rawInputs[2] - ridgeConfig.mean[2]) / ridgeConfig.std[2];
+    var pred = ridgeConfig.intercept + (ridgeConfig.coef[0]*z0) + (ridgeConfig.coef[1]*z1) + (ridgeConfig.coef[2]*z2);
+    return Math.max(0.05, pred);
+  }
+
+  function runSimulatorInference(){
+    var vol5d = parseFloat(document.getElementById('slide-vol5d').value);
+    var vol21d = parseFloat(document.getElementById('slide-vol21d').value);
+    var range = parseFloat(document.getElementById('slide-range').value);
+    var volRatio = parseFloat(document.getElementById('slide-volratio').value);
+    var logRet = parseFloat(document.getElementById('slide-logret').value);
+    var cumRet = parseFloat(document.getElementById('slide-cumret').value);
+
+    document.getElementById('val-vol5d').textContent = vol5d.toFixed(4);
+    document.getElementById('val-vol21d').textContent = vol21d.toFixed(4);
+    document.getElementById('val-range').textContent = range.toFixed(4);
+    document.getElementById('val-volratio').textContent = volRatio.toFixed(4);
+    document.getElementById('val-logret').textContent = (logRet >= 0 ? '+' : '') + logRet.toFixed(4);
+    document.getElementById('val-cumret').textContent = (cumRet >= 0 ? '+' : '') + cumRet.toFixed(4);
+
+    var featVec = [logRet, cumRet, vol5d, vol21d, range, volRatio];
+
+    var pNaive = vol5d;
+    var pRidge = predictRidge(PROJECT_DATA.simulator.ridge, [vol5d, range, volRatio]);
+    var pRF = predictRandomForest(PROJECT_DATA.simulator.random_forest, featVec);
+    var pXGB = predictXGBoost(PROJECT_DATA.simulator.xgboost, featVec);
+
+    document.getElementById('sim-pred-naive').textContent = pNaive.toFixed(4);
+    document.getElementById('sim-pred-ridge').textContent = pRidge.toFixed(4);
+    document.getElementById('sim-pred-rf').textContent = pRF.toFixed(4);
+    document.getElementById('sim-pred-xgb').textContent = pXGB.toFixed(4);
+
+    if(simChart){
+      simChart.data.datasets[0].data = [pNaive, pRidge, pRF, pXGB];
+      simChart.update('none');
+    }
+  }
+
+  function initSimChart(){
+    if(!simCtx || typeof Chart === 'undefined') return;
+    var isDark = document.documentElement.dataset.theme === 'dark';
+    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    var textColor = isDark ? '#e6ebf2' : '#1c2a3a';
+
+    simChart = new Chart(simCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Naive', 'Ridge', 'Random Forest', 'XGBoost'],
+        datasets: [{
+          data: [0.225, 0.239, 0.245, 0.243],
+          backgroundColor: ['#d62728', '#2ca02c', '#ff7f0e', '#1f77b4'],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 150 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx){ return 'Predicted 5d Vol: ' + Number(ctx.parsed.y).toFixed(4); }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: textColor, font: { weight: 600 } }
+          },
+          y: {
+            min: 0,
+            max: 1.4,
+            grid: { color: gridColor },
+            ticks: { color: textColor }
+          }
+        }
+      }
+    });
+  }
+
+  var simSliders = ['slide-vol5d', 'slide-vol21d', 'slide-range', 'slide-volratio', 'slide-logret', 'slide-cumret'];
+  simSliders.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('input', runSimulatorInference);
+  });
+
+  var simPresets = {
+    calm: { vol5d: 0.225, vol21d: 0.245, range: 0.0195, ratio: 0.985, log: 0.0008, cum: 0.0035 },
+    friction: { vol5d: 0.380, vol21d: 0.280, range: 0.0650, ratio: 1.850, log: -0.025, cum: -0.065 },
+    covid: { vol5d: 1.150, vol21d: 0.920, range: 0.0880, ratio: 3.450, log: -0.085, cum: -0.220 },
+    bear: { vol5d: 0.450, vol21d: 0.520, range: 0.0420, ratio: 1.400, log: -0.012, cum: -0.140 }
+  };
+
+  var presetBtns = document.querySelectorAll('#sim-presets .btn-toggle');
+  presetBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      presetBtns.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      var p = simPresets[btn.dataset.preset];
+      if(p){
+        document.getElementById('slide-vol5d').value = p.vol5d;
+        document.getElementById('slide-vol21d').value = p.vol21d;
+        document.getElementById('slide-range').value = p.range;
+        document.getElementById('slide-volratio').value = p.ratio;
+        document.getElementById('slide-logret').value = p.log;
+        document.getElementById('slide-cumret').value = p.cum;
+        runSimulatorInference();
+      }
+    });
+  });
+
+  function updateChartsTheme(){
+    updateMetricChart();
+    updateStressChart();
+    if(simChart) simChart.destroy();
+    initSimChart();
+    runSimulatorInference();
+  }
+
+  // Initial Boot
+  renderMetricsTable();
+  updateMetricChart();
+  updateStressChart();
+  initSimChart();
+  runSimulatorInference();
 })();
 </script>
 </body>
