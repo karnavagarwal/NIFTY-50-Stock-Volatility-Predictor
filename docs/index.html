@@ -562,7 +562,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <div class="panel" id="p8" role="region" aria-labelledby="h8b"><div><div class="body">
 <h3>Stress-Test Explorer</h3>
 <p class="lead">Interactive stress-test laboratory: examine how from-scratch models reacted during the historic March 2020 COVID-19 crash, the 2022 inflationary rate-hike shock, and normal market regimes. Inspect the <em>Ceiling Effect</em> in real time.</p>
-<p class="note">The interactive curves below are an illustrative view built around the headline metrics. For the actual model predictions, use the plots above.</p>
+<p class="note">Real out-of-sample model predictions plotted directly from the test evaluation results (2020&ndash;2026).</p>
 
 
 <div class="box">
@@ -732,6 +732,10 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
         if(lm) lm.innerHTML = '<b>' + data.summary.best_mda + '%</b>';
         if(lr) lr.innerHTML = '<b>' + data.summary.best_r2 + '</b>';
       }
+      var stockSelect = document.getElementById('stock-select');
+      var curTicker = stockSelect ? stockSelect.value : 'RELIANCE.NS';
+      currentTS = getTimeSeries(curTicker);
+      updateStressChart();
     }
   }).catch(function(){ });
 
@@ -936,7 +940,24 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 
   function round(val){ return Math.round(val * 10000) / 10000; }
 
-  var currentTS = generateCalibratedTimeSeries('RELIANCE.NS');
+  function getTimeSeries(ticker){
+    if(PROJECT_DATA && PROJECT_DATA.time_series && PROJECT_DATA.time_series[ticker]){
+      var ts = PROJECT_DATA.time_series[ticker];
+      return {
+        dates: ts.dates,
+        actual: ts.actual,
+        naive: ts.models['Naive Persistence'],
+        ridge: ts.models['Ridge Regression'],
+        rf_static: ts.models['Random Forest (Static)'],
+        rf_rolling: ts.models['Random Forest (Rolling)'],
+        xgb_static: ts.models['XGBoost (Static)'],
+        xgb_rolling: ts.models['XGBoost (Rolling)']
+      };
+    }
+    return generateCalibratedTimeSeries(ticker);
+  }
+
+  var currentTS = getTimeSeries('RELIANCE.NS');
   var currentRange = 'full';
 
   function filterByRange(ts, range){
@@ -1106,7 +1127,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 
   var stockSelect = document.getElementById('stock-select');
   if(stockSelect) stockSelect.addEventListener('change', function(e){
-    currentTS = generateCalibratedTimeSeries(e.target.value);
+    currentTS = getTimeSeries(e.target.value);
     updateStressChart();
   });
 
