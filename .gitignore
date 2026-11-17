@@ -3,3 +3,7 @@
 __pycache__/
 *.py[cod]
 Outputs/
+
+# Keep docs output data for GitHub Pages
+!docs/outputs_/
+!docs/outputs_/**
