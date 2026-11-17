@@ -90,6 +90,4 @@ plt.tight_layout()
 # Save the plot as an image
 os.makedirs("Outputs", exist_ok=True)
 plt.savefig("Outputs/lambda_tuning_curve.png")
-
-# Display the plot on screen
-plt.show()
+plt.close()
