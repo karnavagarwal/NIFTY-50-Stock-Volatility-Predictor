@@ -790,7 +790,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   var metricSelect = document.getElementById('metric-select');
   if(metricSelect) metricSelect.addEventListener('change', updateMetricChart);
 
-  // --- Real-data explorer + forecast lookup (reads outputs/*_output.csv) ---
+  // --- Real-data explorer + forecast lookup (reads outputs_/*_output.csv) ---
   var FILES={naive:'naive_persistence',ridge:'linear_regression',rf_static:'random_forest',rf_rolling:'random_forest_rolling',xgb_static:'xgboost',xgb_rolling:'xgboost_rolling'};
   var MODELS=[['naive','Naive Persistence','#e45756'],['ridge','Ridge Regression','#54a24b'],['rf_static','RF (Static)','#f58518'],['rf_rolling','RF (Rolling)','#eeca3b'],['xgb_static','XGBoost (Static)','#4c78a8'],['xgb_rolling','XGBoost (Rolling)','#72b7b2']];
   var RANGES={covid:['2020-02-01','2020-06-30'],'2022':['2022-01-01','2022-12-31'],full:null};
@@ -798,7 +798,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   function g(id){return document.getElementById(id)}
   function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
   function parseCSV(txt){var o=[],L=txt.split(/\r?\n/);for(var i=1;i<L.length;i++){if(!L[i])continue;var c=L[i].split(',');o.push([c[0],c[1],parseFloat(c[2]),parseFloat(c[3])])}return o}
-  function loadAll(){var keys=Object.keys(FILES);return Promise.all(keys.map(function(k){return fetch('outputs/'+FILES[k]+'_output.csv').then(function(r){if(!r.ok)throw new Error(r.status);return r.text()}).then(parseCSV)})).then(function(res){
+  function loadAll(){var keys=Object.keys(FILES);return Promise.all(keys.map(function(k){return fetch('outputs_/'+FILES[k]+'_output.csv').then(function(r){if(!r.ok)throw new Error(r.status);return r.text()}).then(parseCSV)})).then(function(res){
     var D={};
     res.forEach(function(rows,ix){rows.forEach(function(r){var t=D[r[1]]=D[r[1]]||{m:{}},e=t.m[r[0]]=t.m[r[0]]||{};e.actual=r[2];e[keys[ix]]=r[3]})});
     Object.keys(D).forEach(function(tk){var t=D[tk];t.dates=Object.keys(t.m).sort();t.n=t.dates.length;t.actual=t.dates.map(function(d){return t.m[d].actual});keys.forEach(function(k){t[k]=t.dates.map(function(d){var v=t.m[d][k];return v===undefined?null:v})});t.v5=t.naive});
@@ -834,8 +834,8 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   function syncSliders(){var t=DATA[S.tk];g('pd-date').max=t.n-1;g('pd-date').value=selIdx();g('pd-vol').value=S.x}
   function pickDate(i,full){var t=DATA[S.tk];S.sel=t.dates[i];S.x=t.v5[i];var w=win();if(full&&(i<w[0]||i>w[1])){S.range='full';[].forEach.call(g('range-presets').children,function(b){b.classList.toggle('active',b.dataset.range==='full')})}syncSliders();updateStressChart()}
   loadAll().then(function(D){DATA=D;var t=DATA[S.tk],mx=0,i;Object.keys(D).forEach(function(k){D[k].v5.forEach(function(v){if(v>mx)mx=v})});g('pd-vol').max=Math.ceil(mx*20)/20;
-    for(i=0;i<t.n;i++){if(t.dates[i]>='2020-03-23')break}S.sel=t.dates[i];S.x=t.v5[i];syncSliders();g('ex-msg').textContent='Loaded '+Object.keys(D).length+' stocks from outputs/*.csv.';updateStressChart()
-  }).catch(function(){g('ex-msg').textContent='Could not load outputs/*.csv. Serve the site over http (GitHub Pages, or python -m http.server) rather than opening the file directly.'});
+    for(i=0;i<t.n;i++){if(t.dates[i]>='2020-03-23')break}S.sel=t.dates[i];S.x=t.v5[i];syncSliders();g('ex-msg').textContent='Loaded '+Object.keys(D).length+' stocks from outputs_/*.csv.';updateStressChart()
+  }).catch(function(){g('ex-msg').textContent='Could not load outputs_/*.csv. Serve the site over http (GitHub Pages, or python -m http.server) rather than opening the file directly.'});
   g('stock-select').addEventListener('change',function(){if(!DATA)return;S.tk=this.value;var t=DATA[S.tk],i;for(i=0;i<t.n;i++){if(t.dates[i]>=S.sel)break}i=Math.min(i,t.n-1);pickDate(i,false)});
   [].forEach.call(g('range-presets').children,function(b){b.addEventListener('click',function(){if(!DATA)return;S.range=b.dataset.range;[].forEach.call(g('range-presets').children,function(c){c.classList.toggle('active',c===b)});updateStressChart()})});
   [].forEach.call(document.querySelectorAll('#model-toggles input'),function(c){c.addEventListener('change',updateStressChart)});
