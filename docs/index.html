@@ -170,19 +170,6 @@ select:focus{border-color:var(--accent)}
 .kpi-tile .kpi-value{font-size:1.6rem;font-weight:800;font-family:var(--mono);color:var(--accent);margin:2px 0}
 .kpi-tile .kpi-sub{font-size:.75rem;color:var(--mute)}
 
-/* What-If Simulator Grid */
-.sim-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;margin:22px 0;align-items:start}
-.sim-slider-row{margin-bottom:16px}
-.sim-slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
-.sim-slider-head span{font-size:.82rem;font-weight:600}
-.sim-slider-head code{font-weight:700;color:var(--accent)}
-.sim-slider-row input[type=range]{width:100%;height:6px;border-radius:3px;background:var(--line);outline:none}
-.sim-chart-wrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
-.sim-legend{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
-.sim-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.sim-card .name{font-size:.76rem;font-weight:700;color:var(--mute);text-transform:uppercase}
-.sim-card .pred{font-size:1.25rem;font-weight:800;font-family:var(--mono);color:var(--ink);margin:2px 0}
-.sim-card .delta{font-size:.72rem;font-weight:600}
 
 /* Chart Canvas Container */
 .chart-container{position:relative;width:100%;height:380px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 16px 12px;margin:18px 0}
@@ -195,6 +182,9 @@ select:focus{border-color:var(--accent)}
 .step-body h4{margin:2px 0 6px;font-size:1.02rem}
 .step-body p{margin:0 0 6px}
 
+.lx-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#lx-out{margin-top:6px}
+@media(max-width:760px){.lx-grid{grid-template-columns:1fr}}
 footer{padding:48px 0 64px;color:var(--mute);font-size:.88rem}
 footer code{background:none;padding:0;display:block;margin-top:4px}
 
@@ -218,7 +208,6 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 .three,.defs{grid-template-columns:1fr}
 .split,.split.tl{grid-template-columns:1fr}
 .box{padding:18px}.scratch{flex-direction:column;gap:12px}
-.sim-grid{grid-template-columns:1fr}
 .results-table{display:block;overflow-x:auto}
 .chart-container{height:300px}
 }
@@ -424,12 +413,23 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 </div>
 
 <div class="callout"><p class="lbl">Retraining for the final test</p><p>Once the grid searches were done, the parameters were locked for good. To give the models the most exposure to the latest pre-Covid market regime, we retrained them fresh on the <i>combined</i> 2008&ndash;2019 data, then ran the final out-of-sample tests on 2020&ndash;2026.</p></div>
+
+<h3>Justification of Metrics and Comparisons</h3>
+<p>Here&rsquo;s how each metric is calculated and which direction is better.</p><div class="card"><span class="k">Error metric</span><h4>Pseudo-Huber Loss <span class="highlight-pill">Lower is better</span></h4><div class="eq">L<sub>&delta;</sub>(e) = &delta;&sup2;( &radic;(1 + (e/&delta;)&sup2;) &minus; 1 )</div><p>Here <i>e</i> = y &minus; &ycirc; is the prediction error, &delta; = 0.1, and the loss is averaged over all test predictions. It acts like squared error for small errors and like absolute error for large ones.</p></div>
+<div class="card"><span class="k">Error metric</span><h4>RMSE <span class="highlight-pill">Lower is better</span></h4><div class="eq">RMSE = &radic;( (1/n) &Sigma; (y &minus; &ycirc;)&sup2; )</div><p>The square root of the average squared error. Squaring means large misses count extra.</p></div>
+<div class="card"><span class="k">Error metric</span><h4>MAE <span class="highlight-pill">Lower is better</span></h4><div class="eq">MAE = (1/n) &Sigma; |y &minus; &ycirc;|</div><p>The average absolute size of the error, with every miss weighted equally.</p></div>
+<div class="card"><span class="k">Accuracy metric</span><h4>Mean Directional Accuracy (MDA) <span class="highlight-pill">Higher is better</span></h4><p>The percentage of predictions where the model called the <i>direction</i> of the volatility shift (expansion or contraction) correctly. 50% is a coin flip, so anything above it is a real edge.</p></div>
+<div class="card"><span class="k">Accuracy metric</span><h4>Out-of-Sample R&sup2; <span class="highlight-pill">Higher is better</span></h4><div class="eq">R&sup2; = 1 &minus; &Sigma;(y &minus; &ycirc;)&sup2; / &Sigma;(y &minus; &ybar;)&sup2;</div><p>Here &ybar; is the historical mean. R&sup2; is the share of variance the model explains compared with always predicting that mean. 0 means no better than the mean, and negative means worse.</p></div>
 </div></div></div></section>
 
+
 <!-- 07 -->
-<section class="acc" id="s7"><h2><button class="head" aria-expanded="false" aria-controls="p7" id="h7b"><span class="num">07</span><span class="ttl">Out-of-Sample Results &amp; Metric Switcher</span><span class="pm"></span></button></h2>
+<section class="acc" id="s7"><h2><button class="head" aria-expanded="false" aria-controls="p7" id="h7b"><span class="num">07</span><span class="ttl">Results, Errors, and Limitations</span><span class="pm"></span></button></h2>
 <div class="panel" id="p7" role="region" aria-labelledby="h7b"><div><div class="body">
 <p class="lead">Final evaluation across the unseen 2020&ndash;2026 out-of-sample test horizon across all liquid constituents. The metrics below are computed directly from the test prediction outputs.</p>
+<h3>Results Interpreted in Context</h3>
+<p>The switch to walk-forward (rolling) optimization is what made the models viable. The static ML models scored a Mean Directional Accuracy (MDA) of only 38.78% (XGBoost) and 39.68% (Random Forest), while the rolling versions reached 52.28% and 52.68%. Crossing the 50% coin-flip line shows that the rolling models adapt to the shifting NIFTY-50 microstructure.</p><p>The models also capture real variance, with an out-of-sample R&sup2; of 0.27 to 0.29 across the volatile 2020&ndash;2026 test period. Because we avoided the 1-day shifting target trap, our <code>Naive Persistence</code> baseline falls to an R&sup2; of &minus;0.09. Beating it shows the algorithms learned the underlying feature relationships, and aren&rsquo;t just exploiting the autocorrelation of an overlapping 5-day window.</p>
+
 
 <div class="box"><p class="lbl">Complete Model Comparison Table (2020&ndash;2026 Test Set)</p>
 <table class="results-table" id="results-tbl">
@@ -497,6 +497,7 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
 <p class="note">&darr; Lower is better for error metrics (RMSE, MAE, Pseudo-Huber). &uarr; Higher is better for accuracy (MDA &gt; 50% coin-flip) and variance explained (R&sup2;). Best values per column are highlighted in green.</p>
 </div>
 
+
 <h3>Interactive Metric Comparison</h3>
 <p>Switch between evaluation metrics using the dropdown below to compare model behavior and see which models lead under different loss formulations:</p>
 
@@ -521,12 +522,48 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   <p class="lbl">Metric Insight</p>
   <p id="metric-explainer-text"><strong>Root Mean Squared Error (RMSE)</strong>: Random Forest (Rolling) achieves the lowest overall error at 0.1270, closely followed by Static RF (0.1271) and XGBoost (0.1284). All tree models substantially beat the Ridge baseline (0.1326) and Naive Persistence (0.1571).</p>
 </div>
-</div></div></div></section>
+
+<h3>Representative Errors and Uncertainty</h3>
+<div class="card"><span class="k">Error metrics</span><h4>Errors follow the objective functions</h4><p>The error metrics line up with what each algorithm optimizes. Random Forest achieved the lowest Root Mean Squared Error (0.1270 rolling, 0.1271 static), because its variance-reduction splits optimize squared deviations directly.</p></div>
+<div class="card"><span class="k">Error metrics</span><h4>XGBoost wins on the robust losses</h4><p>XGBoost, on the other hand, won both the Pseudo-Huber loss (0.0041) and the Mean Absolute Error (0.0849).</p></div>
+<div class="card"><span class="k">March 2020 crash</span><h4>What happened during the crash</h4><p>Actual volatility hit an extreme of roughly 1.4. The baselines struggled: <code>Naive Persistence</code> produced large, lagged errors by over-predicting <i>after</i> the crash had already happened, and Ridge Regression badly under-predicted the size of the shock. XGBoost (Rolling) handled it best. It scaled up for the high-volatility regime but held back from the extreme 1.4 spike, which is the outlier resistance we wanted from the Pseudo-Huber penalty.</p></div>
+<div class="card">
+  <span class="k">Failure Modes &amp; Error Analysis</span>
+  <h4>Representative Errors &amp; Autocorrelation</h4>
+  <p>Because the target <code>Target_Vol_5d</code> spans five consecutive days, an unexpected macro news event on day \(t\) causes errors in predictions made at \(t-4\) through \(t\). This induces visible block autocorrelation in the residuals. In addition, when volatility spikes abruptly and mean-reverts within 48 hours, all models exhibit a 3&ndash;5 day lag before re-converging to baseline.</p>
+</div><h3>Loss Plots by Stock and Model</h3>
+<p>Every model&rsquo;s prediction plot for every stock, for the COVID crash window and for the overall test period. Pick a period, a stock and a model, or show all six side by side.</p>
+<div class="box" id="lx"><p class="lbl">Loss plot explorer</p>
+<div class="control-row">
+<div class="control-group"><label>Period</label><div class="btn-group" id="lx-period"><button type="button" class="btn-toggle active" data-p="covid">COVID crash</button><button type="button" class="btn-toggle" data-p="overall">Overall</button></div></div>
+<div class="control-group"><label for="lx-tk">Stock</label><select id="lx-tk"><option value="RELIANCE_NS">Reliance (RELIANCE.NS)</option><option value="TCS_NS">TCS (TCS.NS)</option><option value="ITC_NS">ITC (ITC.NS)</option><option value="MARUTI_NS">Maruti (MARUTI.NS)</option><option value="HDFCBANK_NS">HDFC Bank (HDFCBANK.NS)</option></select></div>
+</div>
+<div class="control-group"><label>Model</label><div class="btn-group" id="lx-model"></div></div>
+<div id="lx-out"></div></div>
+<h3>Limitations and Boundaries</h3>
+<div class="card"><span class="k">Boundary</span><h4>Macro-regime vs. micro-direction</h4><p>With an MDA around 52%, the models give only a small edge over a random guess for daily direction. They&rsquo;re good at forecasting the magnitude of the coming volatility regime, but they can&rsquo;t reliably call the exact day-to-day zig-zags of the market.</p></div>
+<div class="card"><span class="k">Boundary</span><h4>Feature constraint isolation</h4><p>The pipeline uses only internal price and volume derivatives (endogenous variables). It has no external macroeconomic indicators, interest-rate data or implied-volatility measures like the India VIX, which caps how well it can ever predict.</p></div>
+<div class="card"><span class="k">Boundary</span><h4>Overlapping target</h4><p>Predicting a rolling 5-day window smooths the target, so the predictions for day <i>t</i> and day <i>t+1</i> share 4 days of data. Walk-forward optimization reduces chronological decay, but deploying this as a live quant strategy would need strictly non-overlapping forward returns or fractional differencing.</p></div>
+<div class="card">
+  <span class="k">Macro Shock Vulnerability</span>
+  <h4>Regime Shift in 2020</h4>
+  <p>The March 2020 COVID-19 crash is a regime shift: the market behaved differently from anything in the 2008&ndash;2019 training data, so the relationship between our features and future volatility changed. Static models are trained once and cannot adapt to this. Tree models also predict by averaging training targets, so they cannot output values beyond the range seen in training, while the linear Ridge model can extrapolate. Rolling (walk-forward) retraining helps the models adapt, but only after a delay of up to six months, so even the rolling models lag a sudden shock. We therefore treat our results as a measure of how well each model copes with a shock, and do not claim that any model can foresee one.</p>
+</div>
+<div class="card">
+  <span class="k">Scope &amp; Statistical Bounds</span>
+  <h4>Other Limitations</h4>
+  <p>The study covers only five large-cap stocks. Hyperparameters were tuned on a single validation year. Targets overlap across consecutive days, so errors are strongly autocorrelated. Our results describe predictive accuracy for volatility and are not a trading strategy or a causal claim.</p>
+</div></div></div></div></section>
 
 <!-- 08 -->
-<section class="acc" id="s8"><h2><button class="head" aria-expanded="false" aria-controls="p8" id="h8b"><span class="num">08</span><span class="ttl">Volatility Stress-Test Explorer</span><span class="pm"></span></button></h2>
+<!-- 08 -->
+<!-- 08 -->
+<section class="acc" id="s8"><h2><button class="head" aria-expanded="false" aria-controls="p8" id="h8b"><span class="num">08</span><span class="ttl">Useful Interaction</span><span class="pm"></span></button></h2>
 <div class="panel" id="p8" role="region" aria-labelledby="h8b"><div><div class="body">
+<h3>Stress-Test Explorer</h3>
 <p class="lead">Interactive stress-test laboratory: examine how from-scratch models reacted during the historic March 2020 COVID-19 crash, the 2022 inflationary rate-hike shock, and normal market regimes. Inspect the <em>Ceiling Effect</em> in real time.</p>
+<p class="note">The interactive curves below are an illustrative view built around the headline metrics. For the actual model predictions, use the plots above.</p>
+
 
 <div class="box">
   <p class="lbl">Interactive Controls</p>
@@ -598,182 +635,24 @@ footer code{background:none;padding:0;display:block;margin-top:4px}
   <p>Notice how during the peak of the March 2020 COVID crash, <strong>actual volatility surged beyond 100%&ndash;130%</strong>. Because decision trees make predictions by partitioning the feature space and outputting the average of training leaf observations, <strong>tree models can never predict a value higher than the maximum target observed in their training data (&asymp; 65%)</strong>.</p>
   <p style="margin-top:8px">As a result, both Random Forest and XGBoost completely &ldquo;plateau&rdquo; at the ceiling during unprecedented shocks. In contrast, <strong>Ridge Regression (being a linear function \(y = w^Tx + b\)) extrapolates out-of-distribution</strong> and keeps climbing alongside the actual surge. However, during normal market conditions, trees achieve vastly superior non-linear modeling.</p>
 </div>
+
 </div></div></div></section>
 
 <!-- 09 -->
-<section class="acc" id="s9"><h2><button class="head" aria-expanded="false" aria-controls="p9" id="h9b"><span class="num">09</span><span class="ttl">What-If Shock Simulator, Limitations &amp; Reproduction</span><span class="pm"></span></button></h2>
+<!-- 09 -->
+<!-- 09 -->
+<section class="acc" id="s9"><h2><button class="head" aria-expanded="false" aria-controls="p9" id="h9b"><span class="num">09</span><span class="ttl">Reproducibility and Technical Integrity</span><span class="pm"></span></button></h2>
 <div class="panel" id="p9" role="region" aria-labelledby="h9b"><div><div class="body">
-<p class="lead">Run live in-browser inference: adjust market conditions using the sliders below to observe how our from-scratch implementations (Ridge solver, Decision Trees, and Pseudo-Huber XGBoost) extrapolate under extreme liquidity and volatility shocks.</p>
-
-<div class="box">
-  <div class="control-row" style="margin-top:0">
-    <div class="control-group">
-      <label>Quick Shock Presets</label>
-      <div class="btn-group" id="sim-presets">
-        <button class="btn-toggle active" data-preset="calm">Calm Market (Medians)</button>
-        <button class="btn-toggle" data-preset="friction">Intraday Friction Spike</button>
-        <button class="btn-toggle" data-preset="covid">COVID-19 Black Swan Shock</button>
-        <button class="btn-toggle" data-preset="bear">Prolonged Bear Market</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="sim-grid">
-    <!-- Sliders Column -->
-    <div class="sim-controls">
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>5-Day Trailing Volatility (<code>Vol_5d</code>)</span>
-          <code id="val-vol5d">0.2250</code>
-        </div>
-        <input type="range" id="slide-vol5d" min="0.05" max="1.50" step="0.005" value="0.225">
-        <small style="color:var(--mute);font-size:.74rem">Annualized realized volatility of last 5 trading days</small>
-      </div>
-
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>21-Day Trailing Volatility (<code>Vol_21d</code>)</span>
-          <code id="val-vol21d">0.2450</code>
-        </div>
-        <input type="range" id="slide-vol21d" min="0.05" max="1.50" step="0.005" value="0.245">
-        <small style="color:var(--mute);font-size:.74rem">Baseline monthly annualized volatility</small>
-      </div>
-
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>Normalized Intraday Range (<code>IntradayRange</code>)</span>
-          <code id="val-range">0.0195</code>
-        </div>
-        <input type="range" id="slide-range" min="0.005" max="0.150" step="0.001" value="0.0195">
-        <small style="color:var(--mute);font-size:.74rem">(High &minus; Low) / Close market friction proxy</small>
-      </div>
-
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>Volume Surge Ratio (<code>VolumeRatio</code>)</span>
-          <code id="val-volratio">0.9850</code>
-        </div>
-        <input type="range" id="slide-volratio" min="0.20" max="5.00" step="0.05" value="0.985">
-        <small style="color:var(--mute);font-size:.74rem">3-day average volume / 21-day average volume</small>
-      </div>
-
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>Daily Log Return (<code>DailyLogReturn</code>)</span>
-          <code id="val-logret">+0.0008</code>
-        </div>
-        <input type="range" id="slide-logret" min="-0.15" max="0.15" step="0.002" value="0.0008">
-        <small style="color:var(--mute);font-size:.74rem">Latest trading day log return</small>
-      </div>
-
-      <div class="sim-slider-row">
-        <div class="sim-slider-head">
-          <span>5-Day Cumulative Return (<code>5dayCumReturn</code>)</span>
-          <code id="val-cumret">+0.0035</code>
-        </div>
-        <input type="range" id="slide-cumret" min="-0.30" max="0.30" step="0.005" value="0.0035">
-        <small style="color:var(--mute);font-size:.74rem">5-day directional momentum</small>
-      </div>
-    </div>
-
-    <!-- Live Prediction Output Column -->
-    <div class="sim-chart-wrap">
-      <p class="lbl" style="margin-bottom:8px">Side-by-Side Model Predictions (<code>Target_Vol_5d</code>)</p>
-      <div style="height:220px;position:relative">
-        <canvas id="simChart"></canvas>
-      </div>
-
-      <div class="sim-legend">
-        <div class="sim-card" style="border-left:4px solid #d62728">
-          <div class="name">Naive Persistence</div>
-          <div class="pred" id="sim-pred-naive">0.2250</div>
-          <div class="delta" id="sim-delta-naive">Baseline</div>
-        </div>
-
-        <div class="sim-card" style="border-left:4px solid #2ca02c">
-          <div class="name">Ridge Regression</div>
-          <div class="pred" id="sim-pred-ridge">0.2392</div>
-          <div class="delta" id="sim-delta-ridge">Linear Z-Score</div>
-        </div>
-
-        <div class="sim-card" style="border-left:4px solid #ff7f0e">
-          <div class="name">Random Forest</div>
-          <div class="pred" id="sim-pred-rf">0.2458</div>
-          <div class="delta" id="sim-delta-rf">Tree Ensemble</div>
-        </div>
-
-        <div class="sim-card" style="border-left:4px solid #1f77b4">
-          <div class="name">Pseudo-Huber XGBoost</div>
-          <div class="pred" id="sim-pred-xgb">0.2431</div>
-          <div class="delta" id="sim-delta-xgb">Gradient Boosted</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <p class="note">Inference is executed 100% client-side: Ridge normalizes inputs using training mean &amp; std then applies linear weights; Random Forest walks individual decision trees; XGBoost computes base score + learning rate &times; tree regression leaf outputs.</p>
-</div>
-
-<h3>Limitations and Scientific Rigour</h3>
-<div class="card">
-  <span class="k">Limitation 01 / Macro Shock Vulnerability</span>
-  <h4>Regime Shift in 2020</h4>
-  <p>The March 2020 COVID-19 crash is a regime shift: the market behaved differently from anything in the 2008&ndash;2019 training data, so the relationship between our features and future volatility changed. Static models are trained once and cannot adapt to this. Tree models also predict by averaging training targets, so they cannot output values beyond the range seen in training, while the linear Ridge model can extrapolate. Rolling (walk-forward) retraining helps the models adapt, but only after a delay of up to six months, so even the rolling models lag a sudden shock. We therefore treat our results as a measure of how well each model copes with a shock, and do not claim that any model can foresee one.</p>
-</div>
-
-<div class="card">
-  <span class="k">Limitation 02 / Scope &amp; Statistical Bounds</span>
-  <h4>Other Limitations</h4>
-  <p>The study covers only five large-cap stocks. Hyperparameters were tuned on a single validation year. Targets overlap across consecutive days, so errors are strongly autocorrelated. Our results describe predictive accuracy for volatility and are not a trading strategy or a causal claim.</p>
-</div>
-
-<div class="card">
-  <span class="k">Limitation 03 / Failure Modes &amp; Error Analysis</span>
-  <h4>Representative Errors &amp; Autocorrelation</h4>
-  <p>Because the target <code>Target_Vol_5d</code> spans five consecutive days, an unexpected macro news event on day \(t\) causes errors in predictions made at \(t-4\) through \(t\). This induces visible block autocorrelation in the residuals. In addition, when volatility spikes abruptly and mean-reverts within 48 hours, all models exhibit a 3&ndash;5 day lag before re-converging to baseline.</p>
-</div>
-
-<h3>Step-by-Step Reproduction Protocol</h3>
-<div class="box">
-  <p class="lbl">How to reproduce our entire pipeline from scratch</p>
-  <ul class="step-list">
-    <li class="step-item">
-      <span class="step-num">1</span>
-      <div class="step-body">
-        <h4>Clone Repository &amp; Install Dependencies</h4>
-        <p>No scikit-learn or black-box libraries are used. Install the exact lightweight dependencies:</p>
-        <pre>git clone https://github.com/karnavagarwal/NIFTY-50-Stock-Volatility-Predictor.git
-cd NIFTY-50-Stock-Volatility-Predictor
-pip install -r requirements.txt</pre>
-      </div>
-    </li>
-    <li class="step-item">
-      <span class="step-num">2</span>
-      <div class="step-body">
-        <h4>Execute the End-to-End Orchestrator Pipeline</h4>
-        <p>Run the master pipeline script. It runs data fetching (via yfinance), preprocessing, 5-day boundary purging, scaling, model training, and generates all evaluation CSVs:</p>
-        <pre>python run_pipeline.py</pre>
-      </div>
-    </li>
-    <li class="step-item">
-      <span class="step-num">3</span>
-      <div class="step-body">
-        <h4>Export Web Data for Interactive Exploration</h4>
-        <p>Generate the JSON artifacts consumed by the site:</p>
-        <pre>python export_webdata.py</pre>
-      </div>
-    </li>
-    <li class="step-item">
-      <span class="step-num">4</span>
-      <div class="step-body">
-        <h4>Launch the Interactive Website</h4>
-        <p>Open <code>docs/index.html</code> directly in any web browser, or host locally via Python:</p>
-        <pre>python -m http.server 8000 -d docs</pre>
-      </div>
-    </li>
-  </ul>
-</div>
-
+<h3>One-Click Reproducibility</h3>
+<p>The whole pipeline is orchestrated by a single master script, <code>run_pipeline.py</code>. Running it triggers the full chronological sequence: data extraction (<code>fetch_data.py</code>), feature engineering (<code>preprocess_data.py</code>), purging and scaling (<code>split_and_scale.py</code>), the walk-forward ML scripts, and finally the graphing engine (<code>evaluate_models.py</code>).</p>
+<p>From a fresh clone of the GitHub repository, that one command reproduces all the CSV outputs, model weights and high-resolution visuals.</p>
+<h3>Modular Technical Integrity</h3>
+<div class="card"><span class="k">No black boxes</span><h4>Libraries we avoided</h4><p>The project avoids black-box libraries like <code>scikit-learn</code> and the official <code>xgboost</code> package.</p></div>
+<div class="card"><span class="k">From scratch</span><h4>What we built ourselves</h4><p>Every algorithm is engineered from scratch in Object-Oriented Python and NumPy: the recursive Decision Trees, the Pseudo-Huber gradient boosters, the Ridge baseline and the <code>StandardScaler</code>. That keeps the data, split logic, preprocessing maths and model step-throughs transparent and auditable.</p></div>
+<h3>Responsible Data and Creation Handling</h3>
+<div class="card"><span class="k">Public data</span><h4>Open-source source</h4><p>The pipeline relies on the open-source <code>yfinance</code> API to query public National Stock Exchange (NSE) data.</p></div>
+<div class="card"><span class="k">No secrets</span><h4>No keys or subscriptions</h4><p>Because the data is public, the codebase needs no private API keys, authentication tokens or paid subscriptions to run.</p></div>
+<div class="card"><span class="k">Safe handling</span><h4>Relative paths, local CSVs</h4><p>No sensitive credentials, hardcoded absolute paths or personal environments are exposed in the repository. Intermediate datasets are saved as relative CSVs (<code>raw_data.csv</code>, <code>processed_data.csv</code>), so data handling stays isolated and safe and works on any machine.</p></div>
 <h3>Student Contributions &amp; Defense</h3>
 <div class="tbl">
   <div class="tr"><span>Author</span><span>Core Responsibilities &amp; Defense Focus</span></div>
@@ -787,6 +666,7 @@ pip install -r requirements.txt</pre>
   </div>
 </div>
 </div></div></div></section>
+
 </main>
 
 <footer>ES335 &middot; Karnav Agarwal &amp; Shubham Ruparel<code>NIFTY-50 / VOLATILITY STUDY</code></footer>
@@ -822,36 +702,6 @@ pip install -r requirements.txt</pre>
       { model: 'Ridge Regression',        rmse: 0.1326, mae: 0.0932, pseudo_huber: 0.0048, mda: 41.19, r2: 0.22, cat: 'Linear' },
       { model: 'Naive Persistence',       rmse: 0.1571, mae: 0.1089, pseudo_huber: 0.0060, mda: 41.16, r2: -0.09, cat: 'Martingale' }
     ],
-    simulator: {
-      features: ['DailyLogReturn', '5dayCumReturn', 'Vol_5d', 'Vol_21d', 'IntradayRange', 'VolumeRatio'],
-      medians: [0.0008, 0.0035, 0.2250, 0.2450, 0.0195, 0.9850],
-      ridge: {
-        mean: [0.2452, 0.0218, 1.0234],
-        std: [0.1245, 0.0121, 0.4851],
-        intercept: 0.2485,
-        coef: [0.0642, 0.0384, 0.0082]
-      },
-      random_forest: {
-        trees: [
-          {f: 2, t: 0.22, l: {f: 4, t: 0.018, l: {v: 0.165}, r: {v: 0.235}}, r: {f: 3, t: 0.36, l: {v: 0.315}, r: {f: 2, t: 0.55, l: {v: 0.442}, r: {v: 0.638}}}},
-          {f: 4, t: 0.022, l: {f: 2, t: 0.20, l: {v: 0.158}, r: {v: 0.248}}, r: {f: 2, t: 0.38, l: {v: 0.328}, r: {f: 3, t: 0.48, l: {v: 0.465}, r: {v: 0.645}}}},
-          {f: 3, t: 0.26, l: {f: 2, t: 0.18, l: {v: 0.152}, r: {v: 0.262}}, r: {f: 4, t: 0.028, l: {v: 0.345}, r: {f: 2, t: 0.50, l: {v: 0.480}, r: {v: 0.652}}}},
-          {f: 2, t: 0.28, l: {f: 5, t: 1.25, l: {v: 0.185}, r: {v: 0.255}}, r: {f: 4, t: 0.032, l: {v: 0.360}, r: {f: 3, t: 0.45, l: {v: 0.475}, r: {v: 0.640}}}},
-          {f: 4, t: 0.025, l: {f: 3, t: 0.22, l: {v: 0.162}, r: {v: 0.270}}, r: {f: 2, t: 0.42, l: {v: 0.352}, r: {f: 5, t: 1.50, l: {v: 0.468}, r: {v: 0.660}}}}
-        ]
-      },
-      xgboost: {
-        base_score: 0.248,
-        learning_rate: 0.1,
-        trees: [
-          {f: 2, t: 0.24, l: {v: -0.065}, r: {f: 4, t: 0.028, l: {v: 0.042}, r: {v: 0.145}}},
-          {f: 3, t: 0.28, l: {v: -0.048}, r: {f: 2, t: 0.38,  l: {v: 0.038}, r: {v: 0.128}}},
-          {f: 4, t: 0.022, l: {v: -0.040}, r: {f: 2, t: 0.32, l: {v: 0.032}, r: {v: 0.115}}},
-          {f: 2, t: 0.35, l: {v: -0.030}, r: {f: 5, t: 1.30,  l: {v: 0.045}, r: {v: 0.098}}},
-          {f: 3, t: 0.35, l: {v: -0.022}, r: {f: 4, t: 0.035, l: {v: 0.040}, r: {v: 0.088}}}
-        ]
-      }
-    }
   };
 
   fetch('results_data.json').then(function(res){
@@ -1257,161 +1107,32 @@ pip install -r requirements.txt</pre>
   var cbInputs = document.querySelectorAll('#model-toggles input[type=checkbox]');
   cbInputs.forEach(function(cb){ cb.addEventListener('change', updateStressChart); });
 
-  // --- What-If Shock Simulator (Live Client-Side Tree Inference) ---
-  var simCtx = document.getElementById('simChart');
-  var simChart = null;
-
-  function walkTree(node, features){
-    if(node.v !== undefined) return node.v;
-    return (features[node.f] <= node.t) ? walkTree(node.l, features) : walkTree(node.r, features);
-  }
-
-  function predictRandomForest(rfConfig, features){
-    var sum = 0;
-    for(var i=0; i<rfConfig.trees.length; i++){
-      sum += walkTree(rfConfig.trees[i], features);
-    }
-    return sum / rfConfig.trees.length;
-  }
-
-  function predictXGBoost(xgbConfig, features){
-    var pred = xgbConfig.base_score;
-    for(var i=0; i<xgbConfig.trees.length; i++){
-      pred += xgbConfig.learning_rate * walkTree(xgbConfig.trees[i], features);
-    }
-    return Math.max(0.05, pred);
-  }
-
-  function predictRidge(ridgeConfig, rawInputs){
-    var z0 = (rawInputs[0] - ridgeConfig.mean[0]) / ridgeConfig.std[0];
-    var z1 = (rawInputs[1] - ridgeConfig.mean[1]) / ridgeConfig.std[1];
-    var z2 = (rawInputs[2] - ridgeConfig.mean[2]) / ridgeConfig.std[2];
-    var pred = ridgeConfig.intercept + (ridgeConfig.coef[0]*z0) + (ridgeConfig.coef[1]*z1) + (ridgeConfig.coef[2]*z2);
-    return Math.max(0.05, pred);
-  }
-
-  function runSimulatorInference(){
-    var vol5d = parseFloat(document.getElementById('slide-vol5d').value);
-    var vol21d = parseFloat(document.getElementById('slide-vol21d').value);
-    var range = parseFloat(document.getElementById('slide-range').value);
-    var volRatio = parseFloat(document.getElementById('slide-volratio').value);
-    var logRet = parseFloat(document.getElementById('slide-logret').value);
-    var cumRet = parseFloat(document.getElementById('slide-cumret').value);
-
-    document.getElementById('val-vol5d').textContent = vol5d.toFixed(4);
-    document.getElementById('val-vol21d').textContent = vol21d.toFixed(4);
-    document.getElementById('val-range').textContent = range.toFixed(4);
-    document.getElementById('val-volratio').textContent = volRatio.toFixed(4);
-    document.getElementById('val-logret').textContent = (logRet >= 0 ? '+' : '') + logRet.toFixed(4);
-    document.getElementById('val-cumret').textContent = (cumRet >= 0 ? '+' : '') + cumRet.toFixed(4);
-
-    var featVec = [logRet, cumRet, vol5d, vol21d, range, volRatio];
-
-    var pNaive = vol5d;
-    var pRidge = predictRidge(PROJECT_DATA.simulator.ridge, [vol5d, range, volRatio]);
-    var pRF = predictRandomForest(PROJECT_DATA.simulator.random_forest, featVec);
-    var pXGB = predictXGBoost(PROJECT_DATA.simulator.xgboost, featVec);
-
-    document.getElementById('sim-pred-naive').textContent = pNaive.toFixed(4);
-    document.getElementById('sim-pred-ridge').textContent = pRidge.toFixed(4);
-    document.getElementById('sim-pred-rf').textContent = pRF.toFixed(4);
-    document.getElementById('sim-pred-xgb').textContent = pXGB.toFixed(4);
-
-    if(simChart){
-      simChart.data.datasets[0].data = [pNaive, pRidge, pRF, pXGB];
-      simChart.update('none');
-    }
-  }
-
-  function initSimChart(){
-    if(!simCtx || typeof Chart === 'undefined') return;
-    var isDark = document.documentElement.dataset.theme === 'dark';
-    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-    var textColor = isDark ? '#e6ebf2' : '#1c2a3a';
-
-    simChart = new Chart(simCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Naive', 'Ridge', 'Random Forest', 'XGBoost'],
-        datasets: [{
-          data: [0.225, 0.239, 0.245, 0.243],
-          backgroundColor: ['#d62728', '#2ca02c', '#ff7f0e', '#1f77b4'],
-          borderRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 150 },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(ctx){ return 'Predicted 5d Vol: ' + Number(ctx.parsed.y).toFixed(4); }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: textColor, font: { weight: 600 } }
-          },
-          y: {
-            min: 0,
-            max: 1.4,
-            grid: { color: gridColor },
-            ticks: { color: textColor }
-          }
-        }
-      }
-    });
-  }
-
-  var simSliders = ['slide-vol5d', 'slide-vol21d', 'slide-range', 'slide-volratio', 'slide-logret', 'slide-cumret'];
-  simSliders.forEach(function(id){
-    var el = document.getElementById(id);
-    if(el) el.addEventListener('input', runSimulatorInference);
-  });
-
-  var simPresets = {
-    calm: { vol5d: 0.225, vol21d: 0.245, range: 0.0195, ratio: 0.985, log: 0.0008, cum: 0.0035 },
-    friction: { vol5d: 0.380, vol21d: 0.280, range: 0.0650, ratio: 1.850, log: -0.025, cum: -0.065 },
-    covid: { vol5d: 1.150, vol21d: 0.920, range: 0.0880, ratio: 3.450, log: -0.085, cum: -0.220 },
-    bear: { vol5d: 0.450, vol21d: 0.520, range: 0.0420, ratio: 1.400, log: -0.012, cum: -0.140 }
-  };
-
-  var presetBtns = document.querySelectorAll('#sim-presets .btn-toggle');
-  presetBtns.forEach(function(btn){
-    btn.addEventListener('click', function(){
-      presetBtns.forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      var p = simPresets[btn.dataset.preset];
-      if(p){
-        document.getElementById('slide-vol5d').value = p.vol5d;
-        document.getElementById('slide-vol21d').value = p.vol21d;
-        document.getElementById('slide-range').value = p.range;
-        document.getElementById('slide-volratio').value = p.ratio;
-        document.getElementById('slide-logret').value = p.log;
-        document.getElementById('slide-cumret').value = p.cum;
-        runSimulatorInference();
-      }
-    });
-  });
-
   function updateChartsTheme(){
     updateMetricChart();
     updateStressChart();
-    if(simChart) simChart.destroy();
-    initSimChart();
-    runSimulatorInference();
   }
 
   // Initial Boot
   renderMetricsTable();
   updateMetricChart();
   updateStressChart();
-  initSimChart();
-  runSimulatorInference();
+})();
+</script>
+<script>
+(function(){
+ var M=[['naive_persistence','Naive Persistence'],['ridge_regression','Ridge Regression'],['random_forest_static','Random Forest (Static)'],['random_forest_rolling','Random Forest (Rolling)'],['xgboost_static','XGBoost (Static)'],['xgboost_rolling','XGBoost (Rolling)'],['all','All six']];
+ var st={p:'covid',m:'xgboost_rolling'},tk=document.getElementById('lx-tk'),out=document.getElementById('lx-out'),mb=document.getElementById('lx-model'),pb=document.getElementById('lx-period');
+ if(!tk)return;
+ function src(m){var c=st.p==='covid';return 'images/'+(c?'Covid_Crash':'Overall')+'/'+tk.value+'/'+(c?'covid':'overall')+'_'+m+'.png'}
+ function fig(m,n){return '<figure class="fig"><img src="'+src(m)+'" alt="'+n+' loss plot for '+tk.options[tk.selectedIndex].text+'" loading="lazy"><figcaption>'+n+' &middot; '+tk.options[tk.selectedIndex].text+' &middot; '+(st.p==='covid'?'COVID crash':'Overall')+'</figcaption></figure>'}
+ function draw(){
+  if(st.m==='all'){out.innerHTML='<div class="lx-grid">'+M.slice(0,6).map(function(x){return fig(x[0],x[1])}).join('')+'</div>'}
+  else{var x=M.filter(function(y){return y[0]===st.m})[0];out.innerHTML=fig(x[0],x[1])}
+  [].forEach.call(mb.children,function(b){b.classList.toggle('active',b.dataset.m===st.m)});
+ }
+ M.forEach(function(x){var b=document.createElement('button');b.type='button';b.className='btn-toggle';b.dataset.m=x[0];b.textContent=x[1];b.onclick=function(){st.m=x[0];draw()};mb.appendChild(b)});
+ [].forEach.call(pb.children,function(b){b.onclick=function(){st.p=b.dataset.p;[].forEach.call(pb.children,function(c){c.classList.toggle('active',c===b)});draw()}});
+ tk.onchange=draw;draw();
 })();
 </script>
 </body>
